@@ -42,7 +42,12 @@ export function startHostServer(opts: HostServerOptions): HostServer {
     res.end();
   });
 
-  server.listen(opts.port);
+  // Bind to '::' for IPv6 dual-stack (Linux IPV6_V6ONLY=0 default accepts
+  // both IPv4 and IPv6). Without an explicit host Node defaults to '::' too,
+  // but being explicit makes the behavior obvious to readers and survives
+  // any future Node default changes. Required for fly: cross-app traffic
+  // on the 6PN network is IPv6-only.
+  server.listen(opts.port, "::");
 
   return {
     close: () =>

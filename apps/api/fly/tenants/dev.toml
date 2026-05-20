@@ -20,7 +20,11 @@ required_secrets = [
 domain = 'dev-api.rockware.io'
 
 [env]
-HOST = '0.0.0.0'
+# HOST: '::' = IPv6 wildcard with Linux dual-stack (accepts both IPv4 and
+# IPv6). Required for cross-app traffic on fly's 6PN network where
+# <app>.internal resolves to IPv6 only. '0.0.0.0' would break the
+# processor's RPC client (workers app) reaching this api.
+HOST = '::'
 LOG_LEVEL = 'debug'
 APP_BASE_URL = 'https://dev.rockware.io'
 BUCKET_NAME = 'rw-dev'

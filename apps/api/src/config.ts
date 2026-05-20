@@ -8,7 +8,11 @@ export const env = {
 
 export const serverConfig = {
   port: process.env.PORT ? parseInt(process.env.PORT, 10) : 30000,
-  host: process.env.HOST || "0.0.0.0",
+  // Bind to IPv6 wildcard '::' for dual-stack — Linux's IPV6_V6ONLY=0
+  // default makes this accept both IPv4 and IPv6 connections. Binding to
+  // '0.0.0.0' would accept IPv4 only, which breaks cross-app traffic on
+  // fly's 6PN network (apps reach each other by IPv6 via <app>.internal).
+  host: process.env.HOST || "::",
   graceDelay: parseInt(process.env.CLOSE_GRACE_DELAY || "", 10) || 500, // milliseconds
 };
 
