@@ -22,6 +22,7 @@ import { createPrismaClient } from "@rw/db";
 createPrismaClient("api");
 
 import { initEventsBridge } from "@rw/runtime/events-bus";
+import { initMetricsBridge } from "@rw/domain/rpc/metrics-bus";
 
 import { serverConfig } from "./config.js";
 import { startStaleGatewayCheck, stopStaleGatewayCheck } from "@rw/domain/queues/background-workers";
@@ -33,6 +34,7 @@ import { registerReplayReconcileWorker, stopReplayReconcileWorker } from "@rw/do
 import { recoverReplayWindows, cleanup as cleanupReplay } from "@rw/domain/services/cycle/replay";
 
 let cleanupBridge: (() => Promise<void>) | null = null;
+let cleanupMetricsBridge: (() => Promise<void>) | null = null;
 
 async function main() {
   // Initialize driver registry (load from files and upsert to DB —
@@ -47,6 +49,9 @@ async function main() {
   // Subscribe to the cross-process events-bus so stream events published
   // by apps/workers reach this instance's oRPC subscribers.
   cleanupBridge = await initEventsBridge("subscriber");
+  // Same for metric-bus events (rollup BucketChange + live MetricValueEvent)
+  // that frontend live-update components (current-shift-recap etc.) depend on.
+  cleanupMetricsBridge = await initMetricsBridge("subscriber");
 
   // Producer-side queues that HTTP/RPC handlers enqueue against. These
   // initialize Queue instances; the workers consuming them run elsewhere
@@ -80,6 +85,7 @@ async function shutdown() {
     cleanupReplay(),
   ]);
   if (cleanupBridge) await cleanupBridge();
+  if (cleanupMetricsBridge) await cleanupMetricsBridge();
   const { createPrismaClient: getClient } = await import("@rw/db");
   await getClient("api").$disconnect();
 }

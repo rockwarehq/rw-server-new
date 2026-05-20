@@ -7,6 +7,7 @@
 
 import { createPrismaClient } from "@rw/db";
 import { initEventsBridge } from "@rw/runtime/events-bus";
+import { initMetricsBridge } from "@rw/domain/rpc/metrics-bus";
 import {
   startStationEventWorker,
   stopStationEventWorker,
@@ -16,10 +17,15 @@ import { initMetricBucketQueues, stopMetricBucketQueues } from "@rw/domain/queue
 import { cleanup as cleanupReplay } from "@rw/domain/services/cycle/replay";
 
 let cleanupBridge: (() => Promise<void>) | null = null;
+let cleanupMetricsBridge: (() => Promise<void>) | null = null;
 
 export async function startProcessorConsumer(): Promise<void> {
   createPrismaClient("processor-consumer");
   cleanupBridge = await initEventsBridge("publisher");
+  // Bridge metric-bus events to api over Redis. cycle.complete publishes
+  // live metric value changes (station status, current job, etc.) that
+  // frontend SSE subscribers depend on.
+  cleanupMetricsBridge = await initMetricsBridge("publisher");
 
   // These queues need to be initialized so scheduleDetection and
   // scheduleNextShiftBuckets can enqueue jobs from inside the worker.
@@ -34,6 +40,7 @@ export async function stopProcessorConsumer(): Promise<void> {
   await stopStationEventWorker();
   await Promise.all([stopQueues(), stopMetricBucketQueues(), cleanupReplay()]);
   if (cleanupBridge) await cleanupBridge();
+  if (cleanupMetricsBridge) await cleanupMetricsBridge();
   const { createPrismaClient: getClient } = await import("@rw/db");
   await getClient("processor-consumer").$disconnect();
 }

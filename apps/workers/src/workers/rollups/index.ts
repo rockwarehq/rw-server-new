@@ -12,6 +12,7 @@
 
 import { createPrismaClient } from "@rw/db";
 import { initEventsBridge } from "@rw/runtime/events-bus";
+import { initMetricsBridge } from "@rw/domain/rpc/metrics-bus";
 import {
   startMetricBucketEnsure,
   stopMetricBucketEnsure,
@@ -30,10 +31,14 @@ import {
 import { startDirtyBucketConsumer, stopDirtyBucketConsumer } from "@rw/domain/services/metrics/batcher";
 
 let cleanupBridge: (() => Promise<void>) | null = null;
+let cleanupMetricsBridge: (() => Promise<void>) | null = null;
 
 export async function startRollups(): Promise<void> {
   createPrismaClient("rollups");
   cleanupBridge = await initEventsBridge("publisher");
+  // Bridge metric-bus events to api over Redis so frontend SSE
+  // (current-shift-recap, live KPIs) reflects rollup changes.
+  cleanupMetricsBridge = await initMetricsBridge("publisher");
 
   await initMetricBucketQueues();
   await registerMetricBucketWorkers();
@@ -49,6 +54,7 @@ export async function stopRollups(): Promise<void> {
   await stopDirtyBucketConsumer();
   await Promise.all([stopMetricBucketEnsure(), stopMetricBucketQueues(), stopShiftChangeQueue()]);
   if (cleanupBridge) await cleanupBridge();
+  if (cleanupMetricsBridge) await cleanupMetricsBridge();
   const { createPrismaClient: getClient } = await import("@rw/db");
   await getClient("rollups").$disconnect();
 }

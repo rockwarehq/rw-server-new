@@ -1,4 +1,5 @@
 import { EventPublisher } from "@orpc/server";
+import { Redis } from "ioredis";
 import { METRIC_CATALOG_REGISTRY } from "../services/metric-catalog/index.js";
 import type { BucketChange } from "../services/metrics/sync.js";
 
@@ -39,8 +40,18 @@ const BUCKET_VALUE_KEYS = METRIC_CATALOG_REGISTRY.filter(
   (definition) => !definition.granularities.some((granularity) => granularity === "LIVE"),
 ).map((definition) => definition.key);
 
+// Default publish funcs write to the local in-process EventPublisher. In the
+// monorepo split, workers (rollups + processor-consumer) publish and api
+// subscribes; initMetricsBridge swaps these to/from Redis pub/sub.
+let publishChangeFn: (event: MetricChangeEvent) => void = (event) => {
+  metricsPublisher.publish("change", event);
+};
+let publishValueFn: (event: MetricValueEvent) => void = (event) => {
+  metricsPublisher.publish("value", event);
+};
+
 export function publishMetricChange(change: MetricChangeEvent): void {
-  metricsPublisher.publish("change", change);
+  publishChangeFn(change);
 }
 
 export function subscribeMetricChanges(options?: { signal?: AbortSignal }) {
@@ -48,7 +59,7 @@ export function subscribeMetricChanges(options?: { signal?: AbortSignal }) {
 }
 
 export function publishMetricValueChange(change: MetricValueEvent): void {
-  metricsPublisher.publish("value", change);
+  publishValueFn(change);
 }
 
 export function publishBucketMetricValueChanges(change: MetricChangeEvent): void {
@@ -80,4 +91,77 @@ export function publishBucketMetricValueChanges(change: MetricChangeEvent): void
 
 export function subscribeMetricValueChanges(options?: { signal?: AbortSignal }) {
   return metricsPublisher.subscribe("value", options);
+}
+
+// ── Cross-process bridge (Redis pub/sub) ────────────────────────────────
+// Mirrors @rw/runtime/events-bus.initEventsBridge. Required for the SSE
+// pipeline in the monorepo split: rollups (in apps/workers) publishes
+// metric changes that api (separate process) feeds into oRPC subscribers
+// for frontend live updates like current-shift-recap.
+
+const METRIC_EVENTS_CHANNEL = "metric-events";
+
+type BridgedMetricEvent =
+  | { type: "change"; payload: MetricChangeEvent }
+  | { type: "value"; payload: MetricValueEvent };
+
+// JSON loses Date types. Revive the known Date fields on each event shape.
+function reviveChangeDates(e: MetricChangeEvent): MetricChangeEvent {
+  if (e.startTime) e.startTime = new Date(e.startTime as unknown as string);
+  if (e.businessDate) e.businessDate = new Date(e.businessDate as unknown as string);
+  return e;
+}
+
+function reviveValueDates(e: MetricValueEvent): MetricValueEvent {
+  if (e.observedAt) e.observedAt = new Date(e.observedAt as unknown as string);
+  if (e.startTime) e.startTime = new Date(e.startTime as unknown as string);
+  if (e.businessDate) e.businessDate = new Date(e.businessDate as unknown as string);
+  return e;
+}
+
+export async function initMetricsBridge(mode: "publisher" | "subscriber"): Promise<() => Promise<void>> {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    console.log("[metrics-bus] REDIS_URL not set, skipping bridge");
+    return async () => {};
+  }
+
+  if (mode === "publisher") {
+    const pub = new Redis(redisUrl);
+    publishChangeFn = (event) => {
+      pub.publish(METRIC_EVENTS_CHANNEL, JSON.stringify({ type: "change", payload: event })).catch((err: unknown) => {
+        console.error("[metrics-bus] Failed to publish change to Redis:", err);
+      });
+    };
+    publishValueFn = (event) => {
+      pub.publish(METRIC_EVENTS_CHANNEL, JSON.stringify({ type: "value", payload: event })).catch((err: unknown) => {
+        console.error("[metrics-bus] Failed to publish value to Redis:", err);
+      });
+    };
+    console.log("[metrics-bus] Publishing metric events via Redis");
+    return async () => {
+      pub.disconnect();
+    };
+  }
+
+  const sub = new Redis(redisUrl);
+  sub.subscribe(METRIC_EVENTS_CHANNEL).catch((err: unknown) => {
+    console.error("[metrics-bus] Failed to subscribe:", err);
+  });
+  sub.on("message", (_channel: string, message: string) => {
+    try {
+      const parsed = JSON.parse(message) as BridgedMetricEvent;
+      if (parsed.type === "change") {
+        metricsPublisher.publish("change", reviveChangeDates(parsed.payload));
+      } else {
+        metricsPublisher.publish("value", reviveValueDates(parsed.payload));
+      }
+    } catch (err) {
+      console.error("[metrics-bus] Failed to parse event from Redis:", err);
+    }
+  });
+  console.log("[metrics-bus] Subscribing to metric events via Redis");
+  return async () => {
+    sub.disconnect();
+  };
 }
