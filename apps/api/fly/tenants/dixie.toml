@@ -1,14 +1,34 @@
 app = 'dixie-api'
 
+# Fly secrets (set via flyctl secrets set -a dixie-api):
+# - DATABASE_URL (pooled endpoint — port 6432 if PSDB / pgbouncer)
+# - DATABASE_URL_MIGRATION (direct endpoint — port 5432) — used by [deploy] release_command
+# - REDIS_URL, JWT_SECRET, RESEND_API_KEY, PROCESSOR_SHARED_SECRET
+# - MQTT_GATEWAY_REALY_URL, MQTT_GATEWAY_REALY_USER, MQTT_GATEWAY_REALY_PASSWORD
+# - AWS_* + BUCKET_NAME (if S3 uploads enabled)
 [_meta]
-required_secrets = ['DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'RESEND_API_KEY', 'MQTT_GATEWAY_REALY_URL', 'MQTT_GATEWAY_REALY_USER', 'MQTT_GATEWAY_REALY_PASSWORD']
+required_secrets = [
+  'DATABASE_URL',
+  'DATABASE_URL_MIGRATION',
+  'REDIS_URL',
+  'JWT_SECRET',
+  'RESEND_API_KEY',
+  'PROCESSOR_SHARED_SECRET',
+  'MQTT_GATEWAY_REALY_URL',
+  'MQTT_GATEWAY_REALY_USER',
+  'MQTT_GATEWAY_REALY_PASSWORD',
+]
 domain = 'dixie-api.rockware.io'
 
 [env]
-HOST = '0.0.0.0'
 LOG_LEVEL = 'info'
 APP_BASE_URL = 'https://dixie.rockware.io'
 BUCKET_NAME = 'rw-dixie'
+# DEV_CYCLE_SIMULATOR is local-dev only. On fly, cycles ALWAYS come from
+# workers/processor (MQTT ingest). Do not set DEV_CYCLE_SIMULATOR here.
+# PROCESSOR_CACHE_REFRESH_URL: api → workers cache-invalidation callback.
+# Enable once dixie-workers exposes /internal/cache/refresh on a non-9465
+# port (see workers/fly/tenants/dixie.toml STATION_EVENTS_CACHE_REFRESH_*).
 
 [[http_service.checks]]
 interval = '10s'
@@ -16,3 +36,9 @@ timeout = '2s'
 grace_period = '30s'
 method = 'GET'
 path = '/health'
+
+# Dixie runs heavier load; bump CPU.
+[[vm]]
+memory = '512mb'
+cpu_kind = 'shared'
+cpus = 2

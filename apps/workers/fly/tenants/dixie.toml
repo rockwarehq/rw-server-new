@@ -1,7 +1,47 @@
 app = 'dixie-workers'
 
+# Fly secrets (set via flyctl secrets set -a dixie-workers):
+# - DATABASE_URL           (pooled, port 6432) — processor + processor-consumer
+# - DATABASE_URL_ROLLUPS   (direct,  port 5432) — rollups only; long CTE queries
+#                           bypass pgbouncer to avoid tx-mode connection-hold
+# - DATABASE_URL_MIGRATION (direct,  port 5432) — used by [deploy] release_command
+#                           (can be same value as DATABASE_URL_ROLLUPS)
+# - REDIS_URL
+# - PROCESSOR_SHARED_SECRET (must match dixie-api's value — HMAC for processor → api)
+# - MQTT_PASSWORD (broker URL + username are non-sensitive, in [env] below)
 [_meta]
-required_secrets = ['DATABASE_URL', 'REDIS_URL', 'MQTT_BROKER_URL', 'MQTT_USERNAME', 'MQTT_PASSWORD', 'PROCESSOR_SHARED_SECRET']
+required_secrets = [
+  'DATABASE_URL',
+  'DATABASE_URL_ROLLUPS',
+  'DATABASE_URL_MIGRATION',
+  'REDIS_URL',
+  'PROCESSOR_SHARED_SECRET',
+  'MQTT_PASSWORD',
+]
 
 [env]
 LOG_LEVEL = 'info'
+
+# processor → api RPC (triggerEvent / listEventsForProcessor / getTagSnapshots).
+# Use fly's private 6PN DNS for IPv6 cross-app traffic; NO trailing /rpc.
+STATION_EVENTS_ENABLED = 'true'
+STATION_EVENTS_URL = 'http://dixie-api.internal:3000'
+
+# MQTT ingest (processor mode only). Dixie's broker on fly.
+MQTT_BROKER_URL = 'mqtts://dixie-mqtt.fly.dev:443'
+MQTT_USERNAME = 'gateway'
+MQTT_TOPIC = '#'
+
+# Downstream processors.
+WORKSPACE_HTTP_EVENTS_ENABLED = 'true'
+WORKSPACE_HTTP_EVENTS_URL = 'http://dixie-api.internal:3000'
+# DB_EVENTS persists raw point values — dixie's prod-like setup keeps this on.
+# Uses the shared Prisma pool (no DB_EVENTS_CONNECTION_STRING needed).
+DB_EVENTS_ENABLED = 'true'
+POINTS_SPLIT_ENRICH_ENABLED = 'true'
+
+# Cache-refresh server defaults to port 9465 which collides with the healthz
+# host server. Disabled until we expose 9468 in [[services]] + set
+# STATION_EVENTS_CACHE_REFRESH_PORT='9468' + set PROCESSOR_CACHE_REFRESH_URL
+# on dixie-api pointing to http://dixie-workers.internal:9468/internal/cache/refresh.
+STATION_EVENTS_CACHE_REFRESH_ENABLED = 'false'
