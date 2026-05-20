@@ -12,11 +12,7 @@ import {
   type StationMetricContext,
   type TransitionToUpOptions,
 } from "../facility/station/state.js";
-import {
-  enqueueDetection,
-  prepareDetection,
-  type PreparedDetection,
-} from "../facility/station/state-detection.js";
+import { enqueueDetection, prepareDetection, type PreparedDetection } from "../facility/station/state-detection.js";
 import { batchedMetricsUpdate } from "../metrics/batcher.js";
 import { incrementHourCounts } from "../metrics/cascade.js";
 import { trackReplayedCycle } from "./replay.js";
@@ -388,7 +384,16 @@ async function completeImmediate(
     // HOUR-only count increment — fast single UPDATE on one row.
     // SHIFT/DAY/duration/parent/job rollups are deferred to 5s combined tick.
     const totalCycleIncrement = Math.round(Math.max(0, cycleDurationSeconds));
-    await incrementHourCounts(tx, stationId, siteId, timestamp, 1, items.length, idealCycleIncrement, totalCycleIncrement);
+    await incrementHourCounts(
+      tx,
+      stationId,
+      siteId,
+      timestamp,
+      1,
+      items.length,
+      idealCycleIncrement,
+      totalCycleIncrement,
+    );
 
     return { cycle, items, closedEntry, newStatus, stationCtx, detectionPrepared };
   });

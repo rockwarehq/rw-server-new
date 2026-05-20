@@ -101,9 +101,7 @@ export function subscribeMetricValueChanges(options?: { signal?: AbortSignal }) 
 
 const METRIC_EVENTS_CHANNEL = "metric-events";
 
-type BridgedMetricEvent =
-  | { type: "change"; payload: MetricChangeEvent }
-  | { type: "value"; payload: MetricValueEvent };
+type BridgedMetricEvent = { type: "change"; payload: MetricChangeEvent } | { type: "value"; payload: MetricValueEvent };
 
 // JSON loses Date types. Revive the known Date fields on each event shape.
 function reviveChangeDates(e: MetricChangeEvent): MetricChangeEvent {

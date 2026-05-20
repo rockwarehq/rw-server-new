@@ -29,13 +29,16 @@ export function startHostServer(opts: HostServerOptions): HostServer {
       return;
     }
     if (req.url === "/metrics" && opts.getMetrics) {
-      opts.getMetrics().then((body) => {
-        res.writeHead(200, { "content-type": "text/plain; version=0.0.4" });
-        res.end(body);
-      }).catch((err) => {
-        res.writeHead(500);
-        res.end(String(err));
-      });
+      opts
+        .getMetrics()
+        .then((body) => {
+          res.writeHead(200, { "content-type": "text/plain; version=0.0.4" });
+          res.end(body);
+        })
+        .catch((err) => {
+          res.writeHead(500);
+          res.end(String(err));
+        });
       return;
     }
     res.writeHead(404);

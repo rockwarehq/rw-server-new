@@ -23,11 +23,7 @@ import {
   registerMetricBucketWorkers,
   stopMetricBucketQueues,
 } from "@rw/domain/queues/metric-buckets";
-import {
-  initShiftChangeQueue,
-  registerShiftChangeWorker,
-  stopShiftChangeQueue,
-} from "@rw/domain/queues/shift-change";
+import { initShiftChangeQueue, registerShiftChangeWorker, stopShiftChangeQueue } from "@rw/domain/queues/shift-change";
 import { startDirtyBucketConsumer, stopDirtyBucketConsumer } from "@rw/domain/services/metrics/batcher";
 
 let cleanupBridge: (() => Promise<void>) | null = null;

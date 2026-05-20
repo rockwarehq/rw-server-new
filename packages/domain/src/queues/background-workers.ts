@@ -265,9 +265,7 @@ export async function runMetricBucketEnsureTick(): Promise<{ checked: number; ar
     await ensureBucketsBatch(stationInputs, ctx);
   }
 
-  const activeEntities = await prisma.$queryRaw<
-    Array<{ entityType: string; entityId: string; siteId: string }>
-  >`
+  const activeEntities = await prisma.$queryRaw<Array<{ entityType: string; entityId: string; siteId: string }>>`
     SELECT DISTINCT "entityType", "entityId", "siteId" FROM "MetricBucket"
     WHERE "entityType" != 'STATION'
   `;

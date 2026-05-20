@@ -34,10 +34,10 @@
       "apps/**/src/**",
       "packages/**/src/**",
       "scripts/**",
-      "!**/dist/**",
-      "!**/generated/**",
-      "!**/node_modules/**",
-      "!**/_ported/**"
+      "!**/dist",
+      "!**/generated",
+      "!**/node_modules",
+      "!**/_ported"
     ]
   },
   "overrides": [

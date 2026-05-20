@@ -8,10 +8,7 @@
 import { createPrismaClient } from "@rw/db";
 import { initEventsBridge } from "@rw/runtime/events-bus";
 import { initMetricsBridge } from "@rw/domain/rpc/metrics-bus";
-import {
-  startStationEventWorker,
-  stopStationEventWorker,
-} from "@rw/domain/queues/background-workers";
+import { startStationEventWorker, stopStationEventWorker } from "@rw/domain/queues/background-workers";
 import { initQueues, stopQueues } from "@rw/domain/queues/station-detection";
 import { initMetricBucketQueues, stopMetricBucketQueues } from "@rw/domain/queues/metric-buckets";
 import { cleanup as cleanupReplay } from "@rw/domain/services/cycle/replay";
