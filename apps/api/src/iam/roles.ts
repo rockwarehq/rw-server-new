@@ -1,5 +1,5 @@
-import prisma from "../database/client.js";
-import type { Role, RoleScope } from "../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Role, RoleScope } from "@rw/db";
 import { OWNER_PERMISSION, validatePermissions } from "./permissions.js";
 
 export interface CreateRoleInput {

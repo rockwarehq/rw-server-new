@@ -1,5 +1,5 @@
-import prisma from "../../../database/client.js";
-import { Prisma, type Role } from "../../../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma, type Role } from "@rw/db";
 import {
   hasAnyPermission,
   hasOwnerPermission,

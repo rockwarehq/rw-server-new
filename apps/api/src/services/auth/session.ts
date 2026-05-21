@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import { securityConfig } from "../../config.js";
 import { logEvent } from "../audit/index.js";
 import {

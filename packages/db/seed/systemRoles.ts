@@ -1,5 +1,5 @@
-import prisma from "../../src/database/client.js";
-import type { RoleScope } from "../../src/database/generated/client.js";
+import prisma from "../src/client.js";
+import type { RoleScope } from "../src/index.js";
 import { ACTIONS, ALL_PERMISSIONS, RESOURCES } from "../../src/iam/permissions.js";
 import type { Permission } from "../../src/iam/permissions.js";
 

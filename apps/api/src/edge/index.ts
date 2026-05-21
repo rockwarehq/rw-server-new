@@ -2,7 +2,7 @@ import type { JSONSchema } from "json-schema-to-ts";
 import type { FastifyTypedInstance } from "../types/fastify.js";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { gateway } from "../services/device/index.js";
-import prisma from "../database/client.js";
+import prisma from "@rw/db";
 import { errorSchema, successResponseSchema } from "../api/schemas.js";
 import { gatewayMqttConfig } from "../config.js";
 

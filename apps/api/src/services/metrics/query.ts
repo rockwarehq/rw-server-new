@@ -1,4 +1,4 @@
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import { formatStationLogons } from "../employee/logon.js";
 import { MetricsContext } from "@rw/domain/services/metrics/context";
 import { resolveEntityName, resolveEntityPath } from "@rw/domain/services/metrics/hierarchy";

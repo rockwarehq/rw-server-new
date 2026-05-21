@@ -1,5 +1,5 @@
-import prisma from "../../database/client.js";
-import type { Prisma, WeightUnit } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Prisma, WeightUnit } from "@rw/db";
 import { storageConfig } from "../../config.js";
 import * as storage from "../storage/index.js";
 

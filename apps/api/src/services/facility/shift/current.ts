@@ -6,7 +6,7 @@
 //   2. Site-level ShiftInstance (workCenterId IS NULL)
 //   3. No active shift — business date derived from site timezone
 
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { getLocalCalendarDate } from "@rw/domain/services/metrics/bucket";
 
 export interface CurrentShiftResult {

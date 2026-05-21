@@ -1,5 +1,5 @@
-import prisma from "../../database/client.js";
-import type { AuditAction } from "../../database/generated/enums.js";
+import prisma from "@rw/db";
+import type { AuditAction } from "@rw/db";
 
 export interface LogEventParams {
   action: AuditAction;

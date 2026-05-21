@@ -1,5 +1,5 @@
-import prisma from "../../database/client.js";
-import type { Prisma } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Prisma } from "@rw/db";
 import { publishMetricValueChange } from "../../rpc/metrics-bus.js";
 import { logEvent } from "../audit/index.js";
 import { getCurrentShift } from "../facility/shift/current.js";

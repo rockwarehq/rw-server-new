@@ -1,4 +1,4 @@
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { validatePointGroupConfig } from "../../validation.js";
 import { bumpSpecVersion } from "../gateway/index.js";
 

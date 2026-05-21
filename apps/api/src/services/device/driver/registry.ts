@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 
 export interface DriverManifest {
   name: string;

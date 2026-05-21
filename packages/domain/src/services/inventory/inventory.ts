@@ -1,5 +1,5 @@
-import prisma from "../../database/client.js";
-import { Prisma, type WeightUnit } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma, type WeightUnit } from "@rw/db";
 import { convertWeight } from "../../lib/units/index.js";
 
 type TransactionClient = Prisma.TransactionClient;

@@ -1,5 +1,5 @@
-import type { Prisma } from "../../../database/generated/client.js";
-import prisma from "../../../database/client.js";
+import type { Prisma } from "@rw/db";
+import prisma from "@rw/db";
 
 const MAX_EXPRESSION_LENGTH = 2000;
 const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;

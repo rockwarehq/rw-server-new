@@ -15,7 +15,7 @@
 
 import { Queue, Worker } from "bullmq";
 import { bullmqConfig } from "../config.js";
-import prisma from "../database/client.js";
+import prisma from "@rw/db";
 import { runStationEventExecution, STATION_EVENT_EXECUTION_QUEUE } from "../services/facility/station/execution.js";
 import { ensureBuckets, ensureBucketsBatch } from "../services/metrics/bucket.js";
 import { archiveOldBuckets } from "../services/metrics/archive.js";

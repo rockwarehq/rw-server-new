@@ -1,4 +1,4 @@
-import { Prisma, type WeightUnit } from "../../database/generated/client.js";
+import { Prisma, type WeightUnit } from "@rw/db";
 import type { WeightValue } from "./types.js";
 
 // Conversion factors expressed in grams (the base unit). All values are

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { customAlphabet } from "nanoid";
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 
 const alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
 const generateToken = customAlphabet(alphabet, 32);

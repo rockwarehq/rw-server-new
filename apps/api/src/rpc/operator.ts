@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { displayRequired } from "./middleware.js";
 import { auth, logon, crud } from "../services/employee/index.js";
-import prisma from "../database/client.js";
+import prisma from "@rw/db";
 import type { AuthMethod, AuthCredentials } from "../services/employee/auth.js";
 
 // ============================================================================

@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import config from "./config.js";
-import { WeightUnit } from "../../../src/database/generated/client.js";
+import { WeightUnit } from "../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Blob versioning convention for importers

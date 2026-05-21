@@ -49,3 +49,18 @@ export function createPrismaClient(role: DbRole): PrismaClient {
 }
 
 export { PrismaClient } from "./generated/client.js";
+
+// Lazy Prisma singleton.
+//
+// The host process (apps/api/main.ts, apps/workers/main.ts) calls
+// createPrismaClient(role) at boot and seeds the cache above. The proxy's
+// `get` trap defers resolution until first property access, so by the time
+// any consumer touches `prisma.user.findMany(...)` the host has already
+// initialized the cache with the correct role + pool size. The "api" role
+// passed here is ignored — createPrismaClient short-circuits on the cache.
+const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_, prop, receiver) {
+    return Reflect.get(createPrismaClient("api"), prop, receiver);
+  },
+});
+export default prisma;

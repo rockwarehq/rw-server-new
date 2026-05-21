@@ -17,7 +17,7 @@
 // caching. When provided, DB lookups are cached and reused within the
 // same pipeline execution.
 
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import type { MetricsContext } from "./context.js";
 import { TtlCache } from "./ttl-cache.js";
 

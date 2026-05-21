@@ -16,8 +16,8 @@
 // `currentStandardCycle` is NOT summed — it is taken from the
 // sub-bucket with the latest startTime (the most recent hour).
 
-import prisma from "../../database/client.js";
-import { Prisma } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma } from "@rw/db";
 import { type BucketKPIs, ZERO_KPIS, ADDITIVE_KPI_KEYS, sumKPIs } from "./compute.js";
 import { getIncrementTargets, resolveEntityName, resolveEntityPath } from "./hierarchy.js";
 import { onBucketsChanged, rowToSnapshot, type BucketChange } from "./sync.js";

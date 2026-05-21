@@ -1,4 +1,4 @@
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import type { MetricsContext } from "./context.js";
 
 type EntityType = "STATION" | "WORKCENTER" | "SITE" | "JOB";

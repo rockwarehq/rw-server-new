@@ -1,4 +1,4 @@
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { resolveEntityPath } from "../../metrics/hierarchy.js";
 import { MetricsContext } from "../../metrics/context.js";
 import { publishCurrentShiftMetric } from "../station/state.js";

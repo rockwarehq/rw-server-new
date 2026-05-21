@@ -1,5 +1,5 @@
 import { z } from "zod";
-import prisma from "../../../../database/client.js";
+import prisma from "@rw/db";
 import { complete as completeCycle } from "../../../cycle/cycle.js";
 import type { StationActionDefinition } from "./types.js";
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
-import prisma from "../database/client.js";
+import prisma from "@rw/db";
 import * as shiftCommentService from "../services/shift/shift-comment.js";
 
 // ============================================================================
