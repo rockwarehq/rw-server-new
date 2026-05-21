@@ -1,4 +1,4 @@
-import { getDefaultFromAddress, getAppBaseUrl } from "@rw/runtime/email";
+import { getDefaultFromAddress } from "@rw/runtime/email";
 import { getEmailClient, isEmailEnabled } from "@rw/runtime/email";
 import {
   createInviteEmailHtml,

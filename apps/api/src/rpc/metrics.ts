@@ -8,7 +8,7 @@ import * as query from "../services/metrics/query.js";
 import { getShiftForEntity } from "@rw/services/metrics/shift";
 import { rowToSnapshot } from "@rw/services/metrics/sync";
 import { userOrDisplayRequired } from "./middleware.js";
-import { subscribeMetricChanges, subscribeMetricValueChanges, type MetricValueEvent } from "./metrics-bus.js";
+import { subscribeMetricChanges, subscribeMetricValueChanges, type MetricValueEvent } from "@rw/services/rpc/metrics-bus";
 
 const entityTypeSchema = z.enum(["STATION", "WORKCENTER", "SITE", "JOB"]);
 const granularitySchema = z.enum(["MINUTE", "HOUR", "SHIFT", "DAY"]);
