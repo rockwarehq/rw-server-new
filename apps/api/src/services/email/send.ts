@@ -1,5 +1,5 @@
 import { emailConfig } from "../../config.js";
-import { getEmailClient, isEmailEnabled } from "./client.js";
+import { getEmailClient, isEmailEnabled } from "@rw/runtime/email";
 import {
   createInviteEmailHtml,
   createInviteEmailText,
