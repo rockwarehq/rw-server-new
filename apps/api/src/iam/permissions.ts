@@ -1,5 +1,5 @@
-import prisma from "../database/client.js";
-import type { SystemRole } from "../database/generated/client.js";
+import prisma from "@rw/db";
+import type { SystemRole } from "@rw/db";
 
 export const RESOURCES = [
   "facility", // sites, stations, workcenters, gateways, datasources, displays

@@ -1,5 +1,5 @@
-import prisma from "../../../database/client.js";
-import type { Prisma } from "../../../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Prisma } from "@rw/db";
 import { publishStreamEvent } from "../../../rpc/events-bus.js";
 import { notifyStationEventCacheRefresh } from "../../processor/cache.js";
 import { validateActionInput } from "./actions/index.js";

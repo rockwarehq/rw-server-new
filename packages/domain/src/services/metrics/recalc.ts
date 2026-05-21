@@ -20,8 +20,8 @@
 // caching. When provided, repeated lookups (shifts, hierarchy, etc.)
 // are served from the cache instead of hitting the database.
 
-import prisma from "../../database/client.js";
-import { Prisma } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma } from "@rw/db";
 import {
   computeBucketFromEvents,
   computeDurationsForBucket,

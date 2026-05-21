@@ -1,5 +1,5 @@
 import "dotenv/config";
-import prisma from "../../../src/database/client.js";
+import prisma from "../../src/client.js";
 import config from "./config.js";
 import { IdMap } from "./utils.js";
 import { importProcessTypes } from "./importProcessTypes.js";

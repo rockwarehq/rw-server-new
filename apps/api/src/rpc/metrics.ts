@@ -1,6 +1,6 @@
 import { ORPCError, eventIterator } from "@orpc/server";
 import * as z from "zod";
-import prisma from "../database/client.js";
+import prisma from "@rw/db";
 import { Principal } from "../services/auth/index.js";
 import { METRIC_CATALOG_REGISTRY } from "@rw/domain/services/metric-catalog/index";
 import { MetricsContext } from "@rw/domain/services/metrics/context";

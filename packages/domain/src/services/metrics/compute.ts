@@ -12,7 +12,7 @@
 //
 // Pure, stateless, idempotent — no side effects, no writes.
 
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 
 // ── Types ────────────────────────────────────────────────────────
 

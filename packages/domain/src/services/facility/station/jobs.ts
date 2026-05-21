@@ -1,4 +1,4 @@
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { recalcAll } from "../../metrics/recalc.js";
 import { ensureBuckets } from "../../metrics/bucket.js";
 import { jobEntityId } from "../../metrics/cascade.js";

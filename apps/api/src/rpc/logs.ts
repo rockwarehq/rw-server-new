@@ -4,8 +4,8 @@
 
 import { z } from "zod";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
-import prisma from "../database/client.js";
-import { Prisma } from "../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma } from "@rw/db";
 import { queryFilterSchema, toPrismaWhere, toRowFilter, type FieldAllowlist } from "../lib/query-filter/index.js";
 import type { QueryFilter, QueryRule } from "../lib/query-filter/types.js";
 

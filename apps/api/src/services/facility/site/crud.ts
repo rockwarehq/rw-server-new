@@ -1,4 +1,4 @@
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { seedDefaults as seedDefaultRoles } from "../../employee/role.js";
 
 export interface CreateSiteInput {

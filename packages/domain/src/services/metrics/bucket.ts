@@ -6,8 +6,8 @@
 // KPI population is handled by recalc.ts (updateCountBased,
 // updateTimeBased, recalcAll) — this module only creates empty rows.
 
-import prisma from "../../database/client.js";
-import { Prisma } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma } from "@rw/db";
 import {
   getShiftForEntity,
   getHourBucketsForEntity,

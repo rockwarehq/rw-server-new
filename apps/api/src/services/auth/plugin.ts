@@ -4,7 +4,7 @@ import createError from "http-errors";
 import { verifyAccessToken, type DecodedAccessToken } from "./tokens.js";
 import { listAccessibleSites } from "../../iam/index.js";
 import { Principal, type IAMContext, type UnknownIAMContext } from "./context.js";
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 
 const AUTH_HEADER_PREFIX = "Bearer ";
 

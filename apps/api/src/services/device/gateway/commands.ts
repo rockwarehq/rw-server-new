@@ -1,4 +1,4 @@
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 
 export const VALID_COMMANDS = ["restart", "diagnostic", "spec:pull"] as const;
 export type CommandType = (typeof VALID_COMMANDS)[number];

@@ -1,6 +1,6 @@
 import { ORPCError, eventIterator } from "@orpc/server";
 import * as z from "zod";
-import prisma from "../database/client.js";
+import prisma from "@rw/db";
 import { authRequired, processorRequired } from "./middleware.js";
 import { publishStreamEvent, subscribeStreamEvents } from "./events-bus.js";
 

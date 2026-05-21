@@ -1,4 +1,4 @@
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 
 export async function setDefault(workspaceId: string) {
   // Unset any existing default

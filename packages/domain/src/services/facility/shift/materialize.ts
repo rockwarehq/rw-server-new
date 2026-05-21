@@ -16,7 +16,7 @@
 //      d. Compute businessDate using pattern's useEndDateForBusinessDate
 //   3. Batch insert all new ShiftInstance rows
 
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { getSiteTimezone, getLocalCalendarDate } from "../../metrics/bucket.js";
 
 const MS_PER_DAY = 86_400_000;

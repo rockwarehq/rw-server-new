@@ -1,4 +1,4 @@
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import { updateDispositionBadItems } from "@rw/domain/services/metrics/recalc";
 import { deductScrap } from "@rw/domain/services/order/allocation";
 

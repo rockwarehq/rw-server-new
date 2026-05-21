@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createInterface } from "node:readline/promises";
 import bcrypt from "bcrypt";
-import prisma from "../../../src/database/client.js";
+import prisma from "../../src/client.js";
 import { findSystemRole } from "../../../src/iam/roles.js";
 import { seedSystemRoles } from "../systemRoles.js";
 import config from "./config.js";

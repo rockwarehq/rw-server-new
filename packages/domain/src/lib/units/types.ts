@@ -1,3 +1,3 @@
-import type { Prisma } from "../../database/generated/client.js";
+import type { Prisma } from "@rw/db";
 
 export type WeightValue = Prisma.Decimal | number | string;

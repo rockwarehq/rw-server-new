@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { securityConfig } from "../../../config.js";
 import { hashPassword, comparePassword } from "../../auth/session.js";
 import { sendPasswordResetEmail } from "../../email/index.js";

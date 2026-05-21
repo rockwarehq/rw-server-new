@@ -1,5 +1,5 @@
-import prisma from "../../database/client.js";
-import { Prisma, MaterialLedgerKind } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma, MaterialLedgerKind } from "@rw/db";
 
 type TransactionClient = Prisma.TransactionClient;
 

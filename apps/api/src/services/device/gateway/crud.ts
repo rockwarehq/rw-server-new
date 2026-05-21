@@ -1,5 +1,5 @@
 import { customAlphabet } from "nanoid";
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 
 // Alphabet without ambiguous chars (0,1,I,L,O)
 const alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";

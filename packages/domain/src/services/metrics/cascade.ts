@@ -10,8 +10,8 @@
 //   cascadeParentRollup     — sum STATION values → WORKCENTER/SITE
 
 import crypto from "node:crypto";
-import prisma from "../../database/client.js";
-import type { Prisma } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Prisma } from "@rw/db";
 import { onBucketsChanged, rowToSnapshot, type BucketChange } from "./sync.js";
 
 type TransactionClient = Prisma.TransactionClient;

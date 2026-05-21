@@ -27,7 +27,7 @@ import {
   cascadeParentRollup,
   syncExpectedCyclesFromJobs,
 } from "./cascade.js";
-import { classifyDbTimeout } from "../../database/timeouts.js";
+import { classifyDbTimeout } from "@rw/db";
 
 /** Interval for the combined metrics tick (ms). */
 const COMBINED_TICK_MS = 5_000;

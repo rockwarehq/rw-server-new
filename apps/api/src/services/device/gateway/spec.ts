@@ -1,5 +1,5 @@
-import prisma from "../../../database/client.js";
-import type { Datasource, Point, PointGroup } from "../../../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Datasource, Point, PointGroup } from "@rw/db";
 
 /**
  * Build the spec JSON for a gateway by aggregating all datasources, point groups, and points.

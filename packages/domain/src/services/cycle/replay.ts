@@ -20,7 +20,7 @@
 import { randomUUID } from "node:crypto";
 import { Redis } from "ioredis";
 import { Queue } from "bullmq";
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import { recalcAll } from "../metrics/recalc.js";
 import { scheduleDetection } from "../facility/station/state-detection.js";
 import { MetricsContext } from "../metrics/context.js";

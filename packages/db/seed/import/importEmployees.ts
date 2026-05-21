@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../src/database/generated/client.js";
+import type { PrismaClient } from "../../src/index.js";
 import { hashPassword, comparePassword } from "../../../src/services/auth/session.js";
 import {
   type IdMap,

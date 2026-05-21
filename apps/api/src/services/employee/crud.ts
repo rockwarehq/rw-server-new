@@ -1,5 +1,5 @@
-import prisma from "../../database/client.js";
-import type { Prisma } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Prisma } from "@rw/db";
 import { hashPassword } from "../auth/session.js";
 import { publishStationCurrentLogonsMetric } from "./logon.js";
 

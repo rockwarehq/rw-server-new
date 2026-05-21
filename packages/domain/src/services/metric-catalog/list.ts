@@ -1,4 +1,4 @@
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import {
   METRIC_CATALOG_REGISTRY,
   type MetricCatalogDefinition,

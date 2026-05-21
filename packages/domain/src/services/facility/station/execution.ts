@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import prisma from "../../../database/client.js";
+import prisma from "@rw/db";
 import { publishStreamEvent } from "../../../rpc/events-bus.js";
 import { getAction, validateActionInput } from "./actions/index.js";
 

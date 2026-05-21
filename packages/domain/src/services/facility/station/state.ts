@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import prisma from "../../../database/client.js";
-import type { Prisma } from "../../../database/generated/client.js";
+import prisma from "@rw/db";
+import type { Prisma } from "@rw/db";
 import { publishMetricValueChange } from "../../../rpc/metrics-bus.js";
 import { updateTimeBased } from "../../metrics/recalc.js";
 

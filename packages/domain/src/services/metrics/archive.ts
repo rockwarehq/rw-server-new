@@ -8,7 +8,7 @@
 //
 // Called from the 60-second background worker after ensure + recalc.
 
-import prisma from "../../database/client.js";
+import prisma from "@rw/db";
 import { getSiteTimezone, resolveBusinessDate } from "./bucket.js";
 import { computeDurationsForBucket } from "./compute.js";
 import { MetricsContext } from "./context.js";

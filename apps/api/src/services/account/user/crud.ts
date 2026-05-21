@@ -1,5 +1,5 @@
-import prisma from "../../../database/client.js";
-import type { UserStatus } from "../../../database/generated/enums.js";
+import prisma from "@rw/db";
+import type { UserStatus } from "@rw/db";
 import { getEffectivePermissions, listAccessibleSites, type Permission } from "../../../iam/index.js";
 import { logEvent } from "../../audit/index.js";
 import { getWorkspaceAccessSummaries } from "../workspace/members.js";

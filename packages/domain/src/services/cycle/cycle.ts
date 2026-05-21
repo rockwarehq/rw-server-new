@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import prisma from "../../database/client.js";
-import { Prisma } from "../../database/generated/client.js";
+import prisma from "@rw/db";
+import { Prisma } from "@rw/db";
 import { inventory } from "../inventory/index.js";
 import { allocateInventory } from "../order/allocation.js";
 import {

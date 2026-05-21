@@ -10,7 +10,7 @@
  *   pnpm dev:testcycle
  */
 
-import prisma from "../database/client.js";
+import prisma from "@rw/db";
 import { complete } from "@rw/domain/services/cycle/cycle";
 
 const INTERVAL_MS = parseInt(process.env.DEV_CYCLE_SIMULATOR_INTERVAL_MS || "", 10) || 10_000;
