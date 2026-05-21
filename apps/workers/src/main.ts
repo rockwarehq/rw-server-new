@@ -18,7 +18,7 @@ function parseFlag(flag: string): string | null {
 async function loadWorker(name: WorkerName): Promise<{ start: () => Promise<void>; stop: () => Promise<void> }> {
   switch (name) {
     case "rollups": {
-      const m = await import("./rollups/index.js");
+      const m = await import("./rollups.js");
       return { start: m.startRollups, stop: m.stopRollups };
     }
     case "processor": {
@@ -26,7 +26,7 @@ async function loadWorker(name: WorkerName): Promise<{ start: () => Promise<void
       return { start: m.startProcessor, stop: m.stopProcessor };
     }
     case "processor-consumer": {
-      const m = await import("./processor-consumer/index.js");
+      const m = await import("./processor-consumer.js");
       return { start: m.startProcessorConsumer, stop: m.stopProcessorConsumer };
     }
   }

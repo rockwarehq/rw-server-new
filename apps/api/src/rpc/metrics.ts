@@ -4,7 +4,7 @@ import prisma from "@rw/db";
 import { Principal } from "../services/auth/index.js";
 import { METRIC_CATALOG_REGISTRY } from "@rw/services/metric-catalog/index";
 import { MetricsContext } from "@rw/services/metrics/context";
-import * as query from "../services/metrics/query.js";
+import * as query from "../services/metrics.js";
 import { getShiftForEntity } from "@rw/services/metrics/shift";
 import { rowToSnapshot } from "@rw/services/metrics/sync";
 import { userOrDisplayRequired } from "./middleware.js";

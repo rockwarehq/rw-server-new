@@ -69,7 +69,7 @@ async function main() {
   await recoverReplayWindows();
 
   if (process.env.DEV_CYCLE_SIMULATOR) {
-    const { maybeStartCycleSimulator } = await import("./queues/dev-cycle-simulator.js");
+    const { maybeStartCycleSimulator } = await import("./dev-cycle-simulator.js");
     await maybeStartCycleSimulator();
   }
 
