@@ -6,10 +6,10 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/workers/processor/_ported/**/*.test.ts"],
+  "exclude": ["src/processor/_ported/**/*.test.ts"],
   "references": [
     { "path": "../../packages/db" },
     { "path": "../../packages/services" },
-    { "path": "../../packages/runtime" }
+    { "path": "../../packages/infra" }
   ]
 }

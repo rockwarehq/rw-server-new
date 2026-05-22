@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
-import { dashboard } from "../services/dashboard/index.js";
+import { dashboard } from "@rw/services/dashboard/index";
 import { Principal } from "../services/auth/index.js";
 
 // ============================================================================

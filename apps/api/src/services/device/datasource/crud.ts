@@ -1,6 +1,6 @@
 import prisma from "@rw/db";
 import { getDriverInfo, validateConnection } from "../../validation.js";
-import { bumpSpecVersion } from "../gateway/index.js";
+import { bumpSpecVersion } from "@rw/services/device/gateway/index";
 
 export interface CreateDatasourceInput {
   name: string;

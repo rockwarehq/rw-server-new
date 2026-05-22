@@ -65,7 +65,7 @@ if (!env.isDevelopment && !processorConfig.sharedSecret) {
 }
 
 // Re-exported from the shared runtime package.
-export { bullmqConfig } from "@rw/runtime/bullmq-config";
+export { bullmqConfig } from "@rw/infra/bullmq-config";
 
 export const gatewayMqttConfig = {
   mqttUrl: process.env.MQTT_GATEWAY_REALY_URL,

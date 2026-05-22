@@ -1,5 +1,5 @@
-import { emailConfig } from "../../config.js";
-import { getEmailClient, isEmailEnabled } from "./client.js";
+import { getDefaultFromAddress } from "@rw/infra/email";
+import { getEmailClient, isEmailEnabled } from "@rw/infra/email";
 import {
   createInviteEmailHtml,
   createInviteEmailText,
@@ -40,7 +40,7 @@ export async function sendInviteEmail(params: SendInviteParams): Promise<SendRes
 
   try {
     const { data, error } = await client.emails.send({
-      from: emailConfig.fromAddress,
+      from: getDefaultFromAddress(),
       to,
       subject: inviterName ? `${inviterName} invited you to Rockware` : "You're invited to Rockware",
       html: createInviteEmailHtml({ recipientEmail: to, inviteToken, inviterName, workspaceName }),
@@ -75,7 +75,7 @@ export async function sendPasswordResetEmail(params: SendResetParams): Promise<S
 
   try {
     const { data, error } = await client.emails.send({
-      from: emailConfig.fromAddress,
+      from: getDefaultFromAddress(),
       to,
       subject: "Reset your Rockware password",
       html: createResetEmailHtml({ recipientEmail: to, resetToken }),

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
-import { tool, job } from "../services/job/index.js";
+import { tool, job } from "@rw/services/job/index";
 
 // ============================================================================
 // Input Schemas - Tool CRUD

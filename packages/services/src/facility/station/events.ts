@@ -1,6 +1,6 @@
 import prisma from "@rw/db";
 import type { Prisma } from "@rw/db";
-import { publishStreamEvent } from "../../rpc/events-bus.js";
+import { publishStreamEvent } from "@rw/infra/events-bus";
 import { notifyStationEventCacheRefresh } from "../../processor/cache.js";
 import { validateActionInput } from "./actions/index.js";
 import { enqueueStationEventExecution } from "./execution.js";

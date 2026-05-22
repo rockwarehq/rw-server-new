@@ -1,7 +1,7 @@
 import prisma from "@rw/db";
 import type { UserStatus } from "@rw/db";
-import { getEffectivePermissions, listAccessibleSites, type Permission } from "../../../iam/index.js";
-import { logEvent } from "../../audit/index.js";
+import { getEffectivePermissions, listAccessibleSites, type Permission } from "@rw/services/iam/index";
+import { logEvent } from "@rw/services/audit/index";
 import { getWorkspaceAccessSummaries } from "../workspace/members.js";
 
 export interface CreateUserInput {

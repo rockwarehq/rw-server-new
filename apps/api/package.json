@@ -29,7 +29,7 @@
     "@orpc/server": "^1.14.0",
     "@rw/db": "workspace:*",
     "@rw/services": "workspace:*",
-    "@rw/runtime": "workspace:*",
+    "@rw/infra": "workspace:*",
     "ajv": "^8.17.1",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.66.5",

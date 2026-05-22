@@ -11,7 +11,7 @@
 // node process. Each `start*` is idempotent and self-contained.
 
 import { createPrismaClient } from "@rw/db";
-import { initEventsBridge } from "@rw/runtime/events-bus";
+import { initEventsBridge } from "@rw/infra/events-bus";
 import { initMetricsBridge } from "@rw/services/rpc/metrics-bus";
 import {
   startMetricBucketEnsure,
@@ -23,7 +23,11 @@ import {
   registerMetricBucketWorkers,
   stopMetricBucketQueues,
 } from "@rw/services/queues/metric-buckets";
-import { initShiftChangeQueue, registerShiftChangeWorker, stopShiftChangeQueue } from "@rw/services/queues/shift-change";
+import {
+  initShiftChangeQueue,
+  registerShiftChangeWorker,
+  stopShiftChangeQueue,
+} from "@rw/services/queues/shift-change";
 import { startDirtyBucketConsumer, stopDirtyBucketConsumer } from "@rw/services/metrics/batcher";
 
 let cleanupBridge: (() => Promise<void>) | null = null;

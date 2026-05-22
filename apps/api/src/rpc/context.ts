@@ -1,4 +1,4 @@
-import type { DisplayIAMContext, IAMContext, UserIAMContext } from "../services/auth/context.js";
+import type { DisplayIAMContext, IAMContext, UserIAMContext } from "@rw/services/auth/context";
 
 export interface RPCRequest {
   headers: {

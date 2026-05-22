@@ -21,7 +21,7 @@ import "dotenv/config";
 import { createPrismaClient } from "@rw/db";
 createPrismaClient("api");
 
-import { initEventsBridge } from "@rw/runtime/events-bus";
+import { initEventsBridge } from "@rw/infra/events-bus";
 import { initMetricsBridge } from "@rw/services/rpc/metrics-bus";
 
 import { serverConfig } from "./config.js";
@@ -69,7 +69,7 @@ async function main() {
   await recoverReplayWindows();
 
   if (process.env.DEV_CYCLE_SIMULATOR) {
-    const { maybeStartCycleSimulator } = await import("./queues/dev-cycle-simulator.js");
+    const { maybeStartCycleSimulator } = await import("./dev-cycle-simulator.js");
     await maybeStartCycleSimulator();
   }
 

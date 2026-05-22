@@ -2,8 +2,8 @@ import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired, processorRequired, userOrDisplayRequired } from "./middleware.js";
 import { Principal } from "../services/auth/index.js";
-import { station, workcenter } from "../services/facility/index.js";
-import { getAccessibleSites, hasPermission } from "../iam/index.js";
+import { station, workcenter } from "@rw/services/facility/index";
+import { getAccessibleSites, hasPermission } from "@rw/services/iam/index";
 
 // ============================================================================
 // Input Schemas

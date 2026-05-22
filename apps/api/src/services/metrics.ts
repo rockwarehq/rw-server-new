@@ -1,5 +1,5 @@
 import prisma from "@rw/db";
-import { formatStationLogons } from "../employee/logon.js";
+import { formatStationLogons } from "./employee/logon.js";
 import { MetricsContext } from "@rw/services/metrics/context";
 import { resolveEntityName, resolveEntityPath } from "@rw/services/metrics/hierarchy";
 import { rowToSnapshot, type BucketSnapshot } from "@rw/services/metrics/sync";

@@ -289,7 +289,7 @@ export async function update(id: string, input: UpdateEmployeeInput) {
     include: { version: true },
   });
 
-  if (!employee || !employee.version) return { error: "Employee not found", code: "NOT_FOUND" as const };
+  if (!employee?.version) return { error: "Employee not found", code: "NOT_FOUND" as const };
   const currentVersion = employee.version;
 
   const nextEmployeeNumber =

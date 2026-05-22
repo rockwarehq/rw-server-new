@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import prisma from "@rw/db";
 import { securityConfig } from "../../../config.js";
-import { hasOwnerPermission, hasPermission, OWNER_PERMISSION } from "../../../iam/index.js";
+import { hasOwnerPermission, hasPermission, OWNER_PERMISSION } from "@rw/services/iam/index";
 import { hashPassword } from "../../auth/session.js";
 import * as employeeService from "../../employee/index.js";
-import { sendInviteEmail } from "../../email/index.js";
-import { logEvent } from "../../audit/index.js";
+import { sendInviteEmail } from "@rw/services/email/index";
+import { logEvent } from "@rw/services/audit/index";
 import { validatePasswordStrength } from "../../validation.js";
 
 export interface CreateInviteInput {

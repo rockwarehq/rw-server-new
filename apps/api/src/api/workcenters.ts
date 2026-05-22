@@ -1,8 +1,8 @@
 import type { JSONSchema } from "json-schema-to-ts";
 import type { FastifyTypedInstance } from "../types/fastify.js";
-import { workcenter } from "../services/facility/index.js";
+import { workcenter } from "@rw/services/facility/index";
 import { errorSchema, idParamsSchema, successResponseSchema } from "./schemas.js";
-import { getAccessibleSites, hasPermission } from "../iam/index.js";
+import { getAccessibleSites, hasPermission } from "@rw/services/iam/index";
 
 // ============================================================================
 // Schemas

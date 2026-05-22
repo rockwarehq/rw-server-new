@@ -6,7 +6,7 @@
 // of this worker and apps/workers/processor-consumer becomes the sole consumer.
 
 import { createPrismaClient } from "@rw/db";
-import { initEventsBridge } from "@rw/runtime/events-bus";
+import { initEventsBridge } from "@rw/infra/events-bus";
 import { initMetricsBridge } from "@rw/services/rpc/metrics-bus";
 import { startStationEventWorker, stopStationEventWorker } from "@rw/services/queues/background-workers";
 import { initQueues, stopQueues } from "@rw/services/queues/station-detection";

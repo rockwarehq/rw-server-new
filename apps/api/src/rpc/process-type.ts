@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired } from "./middleware.js";
-import { processType } from "../services/facility/index.js";
+import { processType } from "@rw/services/facility/index";
 
 // ============================================================================
 // Input Schemas

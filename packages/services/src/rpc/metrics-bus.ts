@@ -94,7 +94,7 @@ export function subscribeMetricValueChanges(options?: { signal?: AbortSignal }) 
 }
 
 // ── Cross-process bridge (Redis pub/sub) ────────────────────────────────
-// Mirrors @rw/runtime/events-bus.initEventsBridge. Required for the SSE
+// Mirrors @rw/infra/events-bus.initEventsBridge. Required for the SSE
 // pipeline in the monorepo split: rollups (in apps/workers) publishes
 // metric changes that api (separate process) feeds into oRPC subscribers
 // for frontend live updates like current-shift-recap.
@@ -117,7 +117,7 @@ function reviveValueDates(e: MetricValueEvent): MetricValueEvent {
   return e;
 }
 
-// Modes match @rw/runtime/events-bus initEventsBridge — see that file for
+// Modes match @rw/infra/events-bus initEventsBridge — see that file for
 // details on when to use publisher / subscriber / both. apps/api should use
 // `both` once it's horizontally scaled (its own metric publishes need to
 // reach SSE clients on other machines too).

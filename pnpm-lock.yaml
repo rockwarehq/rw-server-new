@@ -56,9 +56,9 @@ importers:
       '@rw/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@rw/runtime':
+      '@rw/infra':
         specifier: workspace:*
-        version: link:../../packages/runtime
+        version: link:../../packages/infra
       '@rw/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -159,9 +159,9 @@ importers:
       '@rw/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@rw/runtime':
+      '@rw/infra':
         specifier: workspace:*
-        version: link:../../packages/runtime
+        version: link:../../packages/infra
       '@rw/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -234,8 +234,14 @@ importers:
         specifier: ~6.0.2
         version: 6.0.3
 
-  packages/runtime:
+  packages/infra:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.999.0
+        version: 3.1049.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.999.0
+        version: 3.1049.0
       '@orpc/server':
         specifier: ^1.14.0
         version: 1.14.3(@opentelemetry/api@1.9.1)(fastify@5.8.5)(ws@8.20.1)
@@ -245,6 +251,9 @@ importers:
       ioredis:
         specifier: ^5.10.1
         version: 5.10.1
+      resend:
+        specifier: ^6.9.1
+        version: 6.12.3
     devDependencies:
       '@types/node':
         specifier: ^24.10.8
@@ -261,15 +270,21 @@ importers:
       '@rw/db':
         specifier: workspace:*
         version: link:../db
-      '@rw/runtime':
+      '@rw/infra':
         specifier: workspace:*
-        version: link:../runtime
+        version: link:../infra
       bullmq:
         specifier: ^5.66.5
         version: 5.76.10
+      fast-jwt:
+        specifier: ^6.1.0
+        version: 6.2.4
       ioredis:
         specifier: ^5.10.1
         version: 5.10.1
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.11
       zod:
         specifier: ^4.3.6
         version: 4.4.3

@@ -1,7 +1,7 @@
 import prisma from "@rw/db";
 import type { Prisma, WeightUnit } from "@rw/db";
-import { storageConfig } from "../../config.js";
-import * as storage from "../storage/index.js";
+
+import * as storage from "@rw/infra/storage";
 
 // ============================================================================
 // Types - Product CRUD
@@ -237,7 +237,7 @@ export async function getById(id: string) {
   const pictures = await Promise.all(
     product.pictures.map(async (pic) => {
       let url: string | null = null;
-      if (storageConfig.enabled) {
+      if (storage.isStorageEnabled()) {
         try {
           url = await storage.getPresignedDownloadUrl(pic.key);
         } catch {
@@ -1287,7 +1287,7 @@ export async function addPicture(input: AddPictureInput) {
   const { productId, filename, contentType, size } = input;
 
   // Validate storage is enabled
-  if (!storageConfig.enabled) {
+  if (!storage.isStorageEnabled()) {
     return { error: "Storage is not configured", code: "STORAGE_NOT_CONFIGURED" };
   }
 
@@ -1312,9 +1312,9 @@ export async function addPicture(input: AddPictureInput) {
   }
 
   // Check picture limit
-  if (product._count.pictures >= storageConfig.maxPicturesPerProduct) {
+  if (product._count.pictures >= storage.getMaxPicturesPerProduct()) {
     return {
-      error: `Maximum of ${storageConfig.maxPicturesPerProduct} pictures per product`,
+      error: `Maximum of ${storage.getMaxPicturesPerProduct()} pictures per product`,
       code: "MAX_PICTURES_REACHED",
     };
   }
@@ -1374,7 +1374,7 @@ export async function removePicture(productId: string, pictureId: string) {
   });
 
   // Only delete from S3 if this is the last reference to this key
-  if (sharedCount === 1 && storageConfig.enabled) {
+  if (sharedCount === 1 && storage.isStorageEnabled()) {
     try {
       await storage.deleteObject(picture.key);
     } catch {
@@ -1458,7 +1458,7 @@ export async function listPictures(productId: string) {
   const picturesWithUrls = await Promise.all(
     pictures.map(async (pic) => {
       let url: string | null = null;
-      if (storageConfig.enabled) {
+      if (storage.isStorageEnabled()) {
         try {
           url = await storage.getPresignedDownloadUrl(pic.key);
         } catch {

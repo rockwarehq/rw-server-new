@@ -13,7 +13,7 @@ import { authPlugin } from "./services/auth/index.js";
 import swaggerPlugin from "./plugins/swagger.js";
 import rateLimitPlugin from "./plugins/ratelimit.js";
 import api from "./api/index.js";
-import edge from "./edge/index.js";
+import edge from "./edge.js";
 import { RPCHandler } from "@orpc/server/fastify";
 import { router } from "./rpc/index.js";
 

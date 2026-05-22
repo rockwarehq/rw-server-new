@@ -6,8 +6,13 @@ import { z } from "zod";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
 import prisma from "@rw/db";
 import { Prisma } from "@rw/db";
-import { queryFilterSchema, toPrismaWhere, toRowFilter, type FieldAllowlist } from "../lib/query-filter/index.js";
-import type { QueryFilter, QueryRule } from "../lib/query-filter/types.js";
+import {
+  queryFilterSchema,
+  toPrismaWhere,
+  toRowFilter,
+  type FieldAllowlist,
+} from "@rw/services/lib/query-filter/index";
+import type { QueryFilter, QueryRule } from "@rw/services/lib/query-filter/types";
 
 // ---------------------------------------------------------------------------
 // Field allowlists — only these fields can be queried dynamically.

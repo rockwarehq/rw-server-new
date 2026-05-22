@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import prisma from "@rw/db";
 import { securityConfig } from "../../config.js";
-import { logEvent } from "../audit/index.js";
+import { logEvent } from "@rw/services/audit/index";
 import {
   createAccessToken,
   createRefreshToken,
@@ -9,8 +9,8 @@ import {
   revokeRefreshToken,
   revokeAllUserRefreshTokens,
   type AccessTokenPayload,
-} from "./tokens.js";
-import { listAccessibleSites } from "../../iam/index.js";
+} from "@rw/services/auth/tokens";
+import { listAccessibleSites } from "@rw/services/iam/index";
 
 const SALT_ROUNDS = 10;
 

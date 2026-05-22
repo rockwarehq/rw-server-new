@@ -1,15 +1,15 @@
 import type { JSONSchema } from "json-schema-to-ts";
-import type { FastifyTypedInstance } from "../types/fastify.js";
+import type { FastifyTypedInstance } from "./types/fastify.js";
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { gateway } from "../services/device/index.js";
+import { gateway } from "./services/device/index.js";
 import prisma from "@rw/db";
-import { errorSchema, successResponseSchema } from "../api/schemas.js";
-import { gatewayMqttConfig } from "../config.js";
+import { errorSchema, successResponseSchema } from "./api/schemas.js";
+import { gatewayMqttConfig } from "./config.js";
 
 async function validateGatewayToken(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith("Bearer ")) {
     reply.status(401).send({ error: "Missing or invalid authorization header" });
     return null;
   }

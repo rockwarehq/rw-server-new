@@ -3,7 +3,7 @@ import type { FastifyTypedInstance } from "../types/fastify.js";
 import { workspace } from "../services/account/index.js";
 import { errorSchema, idParamsSchema, successResponseSchema } from "./schemas.js";
 import { requirePermission } from "../plugins/require-permission.js";
-import { hasPermission } from "../iam/index.js";
+import { hasPermission } from "@rw/services/iam/index";
 
 const workspaceSchema = {
   type: "object",

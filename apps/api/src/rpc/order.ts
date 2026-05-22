@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired } from "./middleware.js";
-import * as orderService from "../services/order/order.js";
+import * as orderService from "@rw/services/order/order";
 
 // ============================================================================
 // Input Schemas

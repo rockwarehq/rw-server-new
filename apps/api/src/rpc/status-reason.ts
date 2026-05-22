@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
-import { statusReason } from "../services/facility/index.js";
+import { statusReason } from "@rw/services/facility/index";
 
 // ============================================================================
 // Input Schemas

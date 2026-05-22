@@ -1,6 +1,6 @@
 import prisma from "@rw/db";
 import { validatePointGroupConfig } from "../../validation.js";
-import { bumpSpecVersion } from "../gateway/index.js";
+import { bumpSpecVersion } from "@rw/services/device/gateway/index";
 
 export interface CreateGroupInput {
   name: string;

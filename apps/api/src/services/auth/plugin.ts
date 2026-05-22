@@ -1,9 +1,9 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import createError from "http-errors";
-import { verifyAccessToken, type DecodedAccessToken } from "./tokens.js";
-import { listAccessibleSites } from "../../iam/index.js";
-import { Principal, type IAMContext, type UnknownIAMContext } from "./context.js";
+import { verifyAccessToken, type DecodedAccessToken } from "@rw/services/auth/tokens";
+import { listAccessibleSites } from "@rw/services/iam/index";
+import { Principal, type IAMContext, type UnknownIAMContext } from "@rw/services/auth/context";
 import prisma from "@rw/db";
 
 const AUTH_HEADER_PREFIX = "Bearer ";

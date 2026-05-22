@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
-import * as dispositionService from "../services/inventory/disposition.js";
-import * as dispositionReasonService from "../services/inventory/disposition-reason.js";
-import * as dispositionLogService from "../services/inventory/disposition-log.js";
+import * as dispositionService from "@rw/services/inventory/disposition";
+import * as dispositionReasonService from "@rw/services/inventory/disposition-reason";
+import * as dispositionLogService from "@rw/services/inventory/disposition-log";
 
 // ============================================================================
 // ItemDisposition Input Schemas

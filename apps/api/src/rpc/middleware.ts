@@ -101,9 +101,9 @@ export const processorRequired = publicProcedure.use(processorMiddleware);
 // against the caller's workspaceId from the auth token.
 //
 // Replaces the old `adminRequired` / `ownerRequired` enum-based gates.
-export const permissionRequired = (permission: import("../iam/index.js").Permission) => {
+export const permissionRequired = (permission: import("@rw/services/iam/index").Permission) => {
   const mw = os.$context<UserAuthenticatedRPCContext>().middleware(async ({ context, next }) => {
-    const { hasPermission } = await import("../iam/index.js");
+    const { hasPermission } = await import("@rw/services/iam/index");
     const userId = context.iam.id;
     const workspaceId = context.iam.workspaceId;
     if (!userId || !workspaceId) {

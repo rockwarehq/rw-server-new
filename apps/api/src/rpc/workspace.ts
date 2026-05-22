@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { hasAnyPermission, roles, type Permission } from "../iam/index.js";
+import { hasAnyPermission, roles, type Permission } from "@rw/services/iam/index";
 import { workspace as workspaceService } from "../services/account/index.js";
 import { authRequired } from "./middleware.js";
 

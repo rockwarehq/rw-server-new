@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { authRequired, userOrDisplayRequired } from "./middleware.js";
-import { material, inventory, product, materialLedger } from "../services/inventory/index.js";
+import { material, inventory, product, materialLedger } from "@rw/services/inventory/index";
 import { storageConfig } from "../config.js";
 
 // ============================================================================

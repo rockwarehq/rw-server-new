@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && tsc -p apps/api",
     "clean": "tsc -b --clean",
     "lint": "biome check",
     "lint:fix": "biome check --fix",

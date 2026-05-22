@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import prisma from "@rw/db";
-import { hashToken } from "../auth/tokens.js";
+import { hashToken } from "@rw/services/auth/tokens";
 
 // ============================================================================
 // Types

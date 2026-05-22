@@ -4,8 +4,17 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./audit/*": "./dist/audit/*.js",
+    "./auth/*": "./dist/auth/*.js",
     "./config": "./dist/config.js",
     "./cycle/*": "./dist/cycle/*.js",
+    "./dashboard/*": "./dist/dashboard/*.js",
+    "./device/*": "./dist/device/*.js",
+    "./display/*": "./dist/display/*.js",
+    "./email/*": "./dist/email/*.js",
+    "./employee/*": "./dist/employee/*.js",
+    "./iam/*": "./dist/iam/*.js",
+    "./job/*": "./dist/job/*.js",
     "./facility/*": "./dist/facility/*.js",
     "./inventory/*": "./dist/inventory/*.js",
     "./lib/*": "./dist/lib/*.js",
@@ -23,9 +32,11 @@
   "dependencies": {
     "@orpc/server": "^1.14.0",
     "@rw/db": "workspace:*",
-    "@rw/runtime": "workspace:*",
+    "@rw/infra": "workspace:*",
     "bullmq": "^5.66.5",
+    "fast-jwt": "^6.1.0",
     "ioredis": "^5.10.1",
+    "nanoid": "^5.1.6",
     "zod": "^4.3.6"
   },
   "devDependencies": {

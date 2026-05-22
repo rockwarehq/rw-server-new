@@ -1,5 +1,5 @@
 {
-  "name": "@rw/runtime",
+  "name": "@rw/infra",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,15 +12,20 @@
     "./logger": "./dist/logger.js",
     "./http-host": "./dist/http-host.js",
     "./lifecycle": "./dist/lifecycle.js",
-    "./job-payloads": "./dist/job-payloads.js"
+    "./job-payloads": "./dist/job-payloads.js",
+    "./email": "./dist/email.js",
+    "./storage": "./dist/storage.js"
   },
   "scripts": {
     "build": "tsc -b"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.999.0",
+    "@aws-sdk/s3-request-presigner": "^3.999.0",
     "@orpc/server": "^1.14.0",
     "bullmq": "^5.66.5",
-    "ioredis": "^5.10.1"
+    "ioredis": "^5.10.1",
+    "resend": "^6.9.1"
   },
   "devDependencies": {
     "@types/node": "^24.10.8",

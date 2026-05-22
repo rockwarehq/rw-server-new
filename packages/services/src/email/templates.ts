@@ -1,4 +1,4 @@
-import { emailConfig } from "../../config.js";
+import { getAppBaseUrl } from "@rw/infra/email";
 
 interface InviteEmailParams {
   recipientEmail: string;
@@ -34,7 +34,7 @@ function baseTemplate(content: string): string {
 
 export function createInviteEmailHtml(params: InviteEmailParams): string {
   const { inviteToken, inviterName, workspaceName } = params;
-  const inviteUrl = `${emailConfig.baseUrl}/invite?token=${inviteToken}`;
+  const inviteUrl = `${getAppBaseUrl()}/invite?token=${inviteToken}`;
 
   const inviterText = inviterName ? `${inviterName} has` : "You have been";
   const workspaceText = workspaceName ? ` to join <strong>${workspaceName}</strong>` : "";
@@ -60,7 +60,7 @@ export function createInviteEmailHtml(params: InviteEmailParams): string {
 
 export function createInviteEmailText(params: InviteEmailParams): string {
   const { inviteToken, inviterName, workspaceName } = params;
-  const inviteUrl = `${emailConfig.baseUrl}/invite?token=${inviteToken}`;
+  const inviteUrl = `${getAppBaseUrl()}/invite?token=${inviteToken}`;
 
   const inviterText = inviterName ? `${inviterName} has` : "You have been";
   const workspaceText = workspaceName ? ` to join ${workspaceName}` : "";
@@ -83,7 +83,7 @@ This email was sent by Rockware.
 
 export function createResetEmailHtml(params: ResetEmailParams): string {
   const { resetToken } = params;
-  const resetUrl = `${emailConfig.baseUrl}/reset-password?token=${resetToken}`;
+  const resetUrl = `${getAppBaseUrl()}/reset-password?token=${resetToken}`;
 
   return baseTemplate(`
     <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 20px;">Reset Your Password</h1>
@@ -106,7 +106,7 @@ export function createResetEmailHtml(params: ResetEmailParams): string {
 
 export function createResetEmailText(params: ResetEmailParams): string {
   const { resetToken } = params;
-  const resetUrl = `${emailConfig.baseUrl}/reset-password?token=${resetToken}`;
+  const resetUrl = `${getAppBaseUrl()}/reset-password?token=${resetToken}`;
 
   return `
 Reset Your Password

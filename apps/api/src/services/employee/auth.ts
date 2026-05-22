@@ -1,7 +1,7 @@
 import prisma from "@rw/db";
 import { securityConfig } from "../../config.js";
 import { comparePassword } from "../auth/session.js";
-import { logEvent } from "../audit/index.js";
+import { logEvent } from "@rw/services/audit/index";
 import { getByBadgeNumber, getByEmployeeNumber } from "./crud.js";
 
 // ============================================================================
