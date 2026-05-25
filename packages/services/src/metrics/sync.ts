@@ -1,4 +1,4 @@
-import { publishBucketMetricValueChanges, publishMetricChange } from "../rpc/metrics-bus.js";
+import { publishMetricChange } from "../rpc/metrics-bus.js";
 
 // ── Bucket change notification ───────────────────────────────────
 // Called whenever MetricBucket rows are mutated. Receives a batch of
@@ -293,8 +293,10 @@ export function flattenChanges(changes: BucketChange[]): KeyValue[] {
 export async function onBucketsChanged(changes: BucketChange[]): Promise<void> {
   if (changes.length === 0) return;
 
+  // Publish only the bucket `change` event. The per-metric value events are
+  // expanded in-process by subscribers (see metrics-bus emitLocalBucketValues),
+  // so we no longer fan out ~20 value publishes per change over Redis.
   for (const change of changes) {
     publishMetricChange(change);
-    publishBucketMetricValueChanges(change);
   }
 }

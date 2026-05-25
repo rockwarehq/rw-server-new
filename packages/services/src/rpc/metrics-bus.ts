@@ -43,8 +43,15 @@ const BUCKET_VALUE_KEYS = METRIC_CATALOG_REGISTRY.filter(
 // Default publish funcs write to the local in-process EventPublisher. In the
 // monorepo split, workers (rollups + processor-consumer) publish and api
 // subscribes; initMetricsBridge swaps these to/from Redis pub/sub.
+//
+// Bucket value events are NOT sent over the wire — they're fully derivable from
+// the bucket `change` snapshot. Every "change" reaching the LOCAL bus is
+// expanded into one value event per bucket metric key via emitLocalBucketValues,
+// so the ~20x fan-out runs in-process on the subscriber instead of multiplying
+// Redis pub/sub traffic. See buildBucketValueEvents below.
 let publishChangeFn: (event: MetricChangeEvent) => void = (event) => {
   metricsPublisher.publish("change", event);
+  emitLocalBucketValues(event);
 };
 let publishValueFn: (event: MetricValueEvent) => void = (event) => {
   metricsPublisher.publish("value", event);
@@ -62,30 +69,40 @@ export function publishMetricValueChange(change: MetricValueEvent): void {
   publishValueFn(change);
 }
 
-export function publishBucketMetricValueChanges(change: MetricChangeEvent): void {
+// Derive the per-metric bucket value events from a single bucket change. Pure —
+// every field comes from the change/snapshot, so this can run anywhere the
+// change is available (notably the api subscriber) without extra Redis traffic.
+function buildBucketValueEvents(change: MetricChangeEvent): MetricValueEvent[] {
   const snapshot = change.snapshot as unknown as Record<string, MetricValuePrimitive>;
   const observedAt = new Date();
 
-  for (const metricKey of BUCKET_VALUE_KEYS) {
-    publishMetricValueChange({
-      siteId: change.siteId,
-      entityType: change.entityType,
-      entityId: change.entityId,
-      metricKey,
-      args: { granularity: change.granularity },
-      sourceType: "bucket",
-      value: snapshot[metricKey] ?? null,
-      observedAt,
-      entityName: change.entityName,
-      path: change.path,
-      granularity: change.granularity,
-      granularityName: change.granularityName,
-      startTime: change.startTime,
-      durationSeconds: change.durationSeconds,
-      shiftInstanceId: change.shiftInstanceId,
-      businessDate: change.businessDate,
-      businessShift: change.businessShift,
-    });
+  return BUCKET_VALUE_KEYS.map((metricKey) => ({
+    siteId: change.siteId,
+    entityType: change.entityType,
+    entityId: change.entityId,
+    metricKey,
+    args: { granularity: change.granularity },
+    sourceType: "bucket",
+    value: snapshot[metricKey] ?? null,
+    observedAt,
+    entityName: change.entityName,
+    path: change.path,
+    granularity: change.granularity,
+    granularityName: change.granularityName,
+    startTime: change.startTime,
+    durationSeconds: change.durationSeconds,
+    shiftInstanceId: change.shiftInstanceId,
+    businessDate: change.businessDate,
+    businessShift: change.businessShift,
+  }));
+}
+
+// Expand a bucket change into value events on the LOCAL in-process bus only.
+// Never routes through publishValueFn, so the expansion can't bounce back out
+// over Redis.
+function emitLocalBucketValues(change: MetricChangeEvent): void {
+  for (const value of buildBucketValueEvents(change)) {
+    metricsPublisher.publish("value", value);
   }
 }
 
@@ -155,7 +172,11 @@ export async function initMetricsBridge(mode: "publisher" | "subscriber" | "both
       try {
         const parsed = JSON.parse(message) as BridgedMetricEvent;
         if (parsed.type === "change") {
-          metricsPublisher.publish("change", reviveChangeDates(parsed.payload));
+          // Only `change` events cross the wire now; regenerate the per-metric
+          // bucket value stream locally so SSE value subscribers are unaffected.
+          const change = reviveChangeDates(parsed.payload);
+          metricsPublisher.publish("change", change);
+          emitLocalBucketValues(change);
         } else {
           metricsPublisher.publish("value", reviveValueDates(parsed.payload));
         }
