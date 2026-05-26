@@ -3,7 +3,7 @@
 process.env.TZ = "UTC";
 
 import "dotenv/config";
-import { startHostServer, onShutdown } from "@rw/infra";
+import { startHostServer, onShutdown } from "@rw/runtime";
 import { createPrismaClient } from "@rw/db";
 
 type WorkerName = "rollups" | "processor" | "processor-consumer";

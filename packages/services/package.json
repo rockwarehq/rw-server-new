@@ -32,7 +32,7 @@
   "dependencies": {
     "@orpc/server": "^1.14.0",
     "@rw/db": "workspace:*",
-    "@rw/infra": "workspace:*",
+    "@rw/runtime": "workspace:*",
     "bullmq": "^5.66.5",
     "fast-jwt": "^6.1.0",
     "ioredis": "^5.10.1",

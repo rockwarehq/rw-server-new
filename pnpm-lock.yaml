@@ -56,9 +56,9 @@ importers:
       '@rw/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@rw/infra':
+      '@rw/runtime':
         specifier: workspace:*
-        version: link:../../packages/infra
+        version: link:../../packages/runtime
       '@rw/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -159,9 +159,9 @@ importers:
       '@rw/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@rw/infra':
+      '@rw/runtime':
         specifier: workspace:*
-        version: link:../../packages/infra
+        version: link:../../packages/runtime
       '@rw/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -234,7 +234,7 @@ importers:
         specifier: ~6.0.2
         version: 6.0.3
 
-  packages/infra:
+  packages/runtime:
     dependencies:
       '@aws-sdk/client-s3':
         specifier: ^3.999.0
@@ -270,9 +270,9 @@ importers:
       '@rw/db':
         specifier: workspace:*
         version: link:../db
-      '@rw/infra':
+      '@rw/runtime':
         specifier: workspace:*
-        version: link:../infra
+        version: link:../runtime
       bullmq:
         specifier: ^5.66.5
         version: 5.76.10

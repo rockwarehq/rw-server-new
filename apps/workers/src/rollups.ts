@@ -11,7 +11,7 @@
 // node process. Each `start*` is idempotent and self-contained.
 
 import { createPrismaClient } from "@rw/db";
-import { initEventsBridge } from "@rw/infra/events-bus";
+import { initEventsBridge } from "@rw/runtime/events-bus";
 import { initMetricsBridge } from "@rw/services/rpc/metrics-bus";
 import {
   startMetricBucketEnsure,

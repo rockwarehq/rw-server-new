@@ -8,7 +8,7 @@ import {
   type ValidatePointWorkspaceAccessResult,
 } from "../services/point-value.js";
 import { Principal } from "../services/auth/index.js";
-import { subscribeStreamEvents, type PointValueEvent, type StreamEvent } from "@rw/infra/events-bus";
+import { subscribeStreamEvents, type PointValueEvent, type StreamEvent } from "@rw/runtime/events-bus";
 import { userOrDisplayRequired } from "./middleware.js";
 
 const pointIdsInputSchema = z.object({

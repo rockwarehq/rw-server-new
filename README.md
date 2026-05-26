@@ -41,7 +41,7 @@ rw-server-new/
 │   └── workers/  (Dockerfile + fly/base.toml + fly/tenants/{sim,dixie,dev}.toml)
 ├── packages/
 │   ├── db/       (schema + migrations + generated client)
-│   └── runtime/  (shared infra)
+│   └── runtime/  (shared runtime)
 └── scripts/
     └── fly-deploy.ts
 ```

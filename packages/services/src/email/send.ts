@@ -1,5 +1,5 @@
-import { getDefaultFromAddress } from "@rw/infra/email";
-import { getEmailClient, isEmailEnabled } from "@rw/infra/email";
+import { getDefaultFromAddress } from "@rw/runtime/email";
+import { getEmailClient, isEmailEnabled } from "@rw/runtime/email";
 import {
   createInviteEmailHtml,
   createInviteEmailText,

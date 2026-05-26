@@ -15,6 +15,6 @@
   "references": [
     { "path": "../../packages/db" },
     { "path": "../../packages/services" },
-    { "path": "../../packages/infra" }
+    { "path": "../../packages/runtime" }
   ]
 }

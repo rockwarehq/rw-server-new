@@ -2,7 +2,7 @@ import { ORPCError, eventIterator } from "@orpc/server";
 import * as z from "zod";
 import prisma from "@rw/db";
 import { authRequired, processorRequired } from "./middleware.js";
-import { publishStreamEvent, subscribeStreamEvents } from "@rw/infra/events-bus";
+import { publishStreamEvent, subscribeStreamEvents } from "@rw/runtime/events-bus";
 
 const pointValueQualitySchema = z.enum(["GOOD", "BAD", "UNKNOWN"]);
 

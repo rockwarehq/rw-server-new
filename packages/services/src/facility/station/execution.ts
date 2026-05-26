@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 import prisma from "@rw/db";
-import { publishStreamEvent } from "@rw/infra/events-bus";
+import { publishStreamEvent } from "@rw/runtime/events-bus";
 import { getAction, validateActionInput } from "./actions/index.js";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";

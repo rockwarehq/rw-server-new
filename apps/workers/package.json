@@ -19,7 +19,7 @@
     "@prisma/client": "^7.5.0",
     "@rw/db": "workspace:*",
     "@rw/services": "workspace:*",
-    "@rw/infra": "workspace:*",
+    "@rw/runtime": "workspace:*",
     "better-result": "^2.9.2",
     "bullmq": "^5.66.5",
     "dotenv": "^17.2.3",

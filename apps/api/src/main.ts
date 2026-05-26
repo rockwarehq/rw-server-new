@@ -21,7 +21,7 @@ import "dotenv/config";
 import { createPrismaClient } from "@rw/db";
 createPrismaClient("api");
 
-import { initEventsBridge } from "@rw/infra/events-bus";
+import { initEventsBridge } from "@rw/runtime/events-bus";
 import { initMetricsBridge } from "@rw/services/rpc/metrics-bus";
 
 import { serverConfig } from "./config.js";

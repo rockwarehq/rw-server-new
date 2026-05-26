@@ -1,7 +1,7 @@
 import prisma from "@rw/db";
 import type { Prisma, WeightUnit } from "@rw/db";
 
-import * as storage from "@rw/infra/storage";
+import * as storage from "@rw/runtime/storage";
 
 // ============================================================================
 // Types - Product CRUD

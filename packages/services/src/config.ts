@@ -1,7 +1,7 @@
 // Config values used by @rw/services. Mirrors the subset of apps/api/src/config.ts
 // that the moved files reference.
 
-export { bullmqConfig } from "@rw/infra/bullmq-config";
+export { bullmqConfig } from "@rw/runtime/bullmq-config";
 
 const processorSharedSecret = process.env.PROCESSOR_SHARED_SECRET || "";
 
