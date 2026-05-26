@@ -248,13 +248,9 @@ export async function record(input: RecordDispositionLogInput) {
     ...passthrough,
   });
 
-  // Deduct from the highest-priority order for this product
-  if ("data" in result) {
-    deductScrap(siteId, productId, passthrough.quantity ?? 1).catch((err) => {
-      console.error(`[disposition-log] Failed to deduct from order for product ${productId}:`, err);
-    });
-  }
-
+  // Order deduction is handled inside create() (via the resolved productBlob),
+  // so we must not call deductScrap again here or scrap would be double-counted
+  // against the order line item.
   return result;
 }
 
