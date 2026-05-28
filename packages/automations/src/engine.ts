@@ -3,6 +3,7 @@ import { type ActionRegistry, missingRequired } from "./actions.js";
 import type { ContextBuilder } from "./context.js";
 import { interpolateInputs } from "./interpolate.js";
 import { qbToEngineConditions } from "./qb-to-engine.js";
+import { noopRunRecorder, type RunRecorder } from "./recorder.js";
 import type { AutomationStore } from "./store.js";
 import type { AppEvent, Automation, EventType } from "./types.js";
 
@@ -11,13 +12,16 @@ export interface EngineDeps {
   /** Per-event-type fact builders. Must cover every event type the framework will see. */
   contextBuilders: Record<EventType, ContextBuilder>;
   actions: ActionRegistry;
+  /** Audit sink. Optional — defaults to `noopRunRecorder` when omitted. */
+  recorder?: RunRecorder;
 }
 
 /**
  * Evaluates automations and runs their actions. The evaluation core (json-rules-engine + condition
- * translation) is shared by every event type; the engine is pluggable in two places:
- *   - SEAM A: how an event becomes facts             -> ContextBuilder (per event type)
- *   - SEAM C: what a matched automation's action does -> ActionRegistry
+ * translation) is shared by every event type; the engine is pluggable in three places:
+ *   - SEAM A: how an event becomes facts              -> ContextBuilder (per event type)
+ *   - SEAM C: what a matched automation's action does  -> ActionRegistry
+ *   - Audit:  per-run + per-action persistence        -> RunRecorder
  *
  * Conditions are indexed per event type, so an automation only runs against events of its own type.
  */
@@ -31,37 +35,64 @@ export interface AutomationEngine {
 export function createAutomationEngine(deps: EngineDeps): AutomationEngine {
   // Compiled engines, one per event type. Rebuilt by reload().
   let engines = new Map<EventType, Engine>();
+  const recorder: RunRecorder = deps.recorder ?? noopRunRecorder;
 
   /**
    * Run every action on the automation, in order. Throws on a missing handler version or missing
    * required input — these are misconfigurations and abort the dispatch loop loudly. Actions that
    * ran before a throw have already produced their side effects; subsequent actions don't run.
    *
-   * Handler resolution is STRICT on `(type, version)`. Event-version dispatch is lenient: the
-   * automation fires against whatever payload arrived (caller decided the event version at
-   * fire-time via FireOptions.version or it defaulted to latest).
+   * Each attempt (success or failure) is recorded via `recorder.recordAction`; on failure we record
+   * FAILED then rethrow so the outer `dispatch` can finalize the run.
    */
-  async function runActions(automation: Automation, event: AppEvent): Promise<void> {
+  async function runActions(automation: Automation, event: AppEvent, runId: string): Promise<void> {
     for (const [idx, action] of automation.actions.entries()) {
-      const versioned = deps.actions.get(action.type, action.version);
-      if (!versioned) {
-        const knownVersions = deps.actions.latest(action.type)
-          ? ` (registered versions of "${action.type}" don't include "${action.version}")`
-          : "";
-        throw new Error(
-          `automation "${automation.label}" (${automation.id}) action #${idx} ("${action.type}@${action.version}"): no handler registered${knownVersions}`,
-        );
-      }
+      const startedAt = new Date().toISOString();
+      try {
+        const versioned = deps.actions.get(action.type, action.version);
+        if (!versioned) {
+          const knownVersions = deps.actions.latest(action.type)
+            ? ` (registered versions of "${action.type}" don't include "${action.version}")`
+            : "";
+          throw new Error(
+            `automation "${automation.label}" (${automation.id}) action #${idx} ("${action.type}@${action.version}"): no handler registered${knownVersions}`,
+          );
+        }
 
-      const inputs = interpolateInputs(action.inputs as Record<string, unknown>, { event });
-      const missing = missingRequired(inputs, versioned.inputSchema);
-      if (missing) {
-        throw new Error(
-          `automation "${automation.label}" (${automation.id}) action #${idx} ("${action.type}@${action.version}"): missing required input "${missing}"`,
-        );
-      }
+        const inputs = interpolateInputs(action.inputs as Record<string, unknown>, { event });
+        const missing = missingRequired(inputs, versioned.inputSchema);
+        if (missing) {
+          throw new Error(
+            `automation "${automation.label}" (${automation.id}) action #${idx} ("${action.type}@${action.version}"): missing required input "${missing}"`,
+          );
+        }
 
-      await versioned.run(inputs, { automation, eventId: event.id });
+        await versioned.run(inputs, { automation, eventId: event.id });
+        await recorder.recordAction({
+          runId,
+          automationId: automation.id,
+          actionIdx: idx,
+          actionType: action.type,
+          actionVersion: action.version,
+          status: "SUCCESS",
+          startedAt,
+          finishedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await recorder.recordAction({
+          runId,
+          automationId: automation.id,
+          actionIdx: idx,
+          actionType: action.type,
+          actionVersion: action.version,
+          status: "FAILED",
+          error: message,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+        });
+        throw err;
+      }
     }
   }
 
@@ -83,22 +114,37 @@ export function createAutomationEngine(deps: EngineDeps): AutomationEngine {
 
     async dispatch(event: AppEvent): Promise<string[]> {
       const engine = engines.get(event.type);
-      if (!engine) return [];
+      if (!engine) {
+        // No automations registered for this event type — open + immediately close a run so the
+        // audit log reflects every fire(), even when nothing matched.
+        const runId = await recorder.startRun({ event });
+        await recorder.finishRun(runId, { matched: [], status: "SUCCESS" });
+        return [];
+      }
 
       const builder = deps.contextBuilders[event.type];
       if (!builder) throw new Error(`no context builder registered for event type "${event.type}"`);
-      const facts = await builder.build(event);
-      const { results } = await engine.run(facts);
 
+      const runId = await recorder.startRun({ event });
       const matched: string[] = [];
-      for (const r of results) {
-        const automationId = r.event?.type;
-        const automation = automationId ? deps.store.get(automationId) : undefined;
-        if (!automation) continue;
-        matched.push(automation.id);
-        await runActions(automation, event);
+      try {
+        const facts = await builder.build(event);
+        const { results } = await engine.run(facts);
+
+        for (const r of results) {
+          const automationId = r.event?.type;
+          const automation = automationId ? deps.store.get(automationId) : undefined;
+          if (!automation) continue;
+          matched.push(automation.id);
+          await runActions(automation, event, runId);
+        }
+        await recorder.finishRun(runId, { matched, status: "SUCCESS" });
+        return matched;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await recorder.finishRun(runId, { matched, status: "FAILED", error: message });
+        throw err;
       }
-      return matched;
     },
   };
 }

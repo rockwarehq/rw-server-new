@@ -16,9 +16,14 @@ import type { Automation } from "./types.js";
  * reload later; a full `reload()` works for now.)
  */
 export interface AutomationStore {
+  /** Synchronous read: list every automation in scope. Cache-served so the engine's hot path stays sync. */
   list(): Automation[];
+  /** Synchronous read: look up one automation by id. Cache-served. */
   get(id: string): Automation | undefined;
-  upsert(t: Automation): Automation;
-  remove(id: string): boolean;
+  /** Persist (insert or update). Returns the canonical row after write. */
+  upsert(automation: Automation): Promise<Automation>;
+  /** Delete by id. Returns true if a row was removed, false if it didn't exist. */
+  remove(id: string): Promise<boolean>;
+  /** Mint a new id (e.g. `atm_<nanoid>`). Synchronous — no I/O. */
   newId(): string;
 }

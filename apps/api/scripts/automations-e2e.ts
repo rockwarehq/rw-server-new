@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), "automations-e2e-"));
   const storePath = join(dir, "automations.json");
   const store = createFileAutomationStore(storePath);
-  const fw = createAppAutomationFramework({ store });
+  const fw = await createAppAutomationFramework({ store });
 
   // ---------------------------------------------------------------------------
   // Seed automation has TWO actions (supervisor alert + shift-lead alert). Test verifies BOTH ran.
@@ -88,8 +88,9 @@ async function main(): Promise<void> {
 
   // ---------------------------------------------------------------------------
   console.log("\n5. Authoring — create a new automation, reload, it fires");
-  const created = store.upsert({
+  const created = await store.upsert({
     id: store.newId(),
+    workspaceId: "dev",
     label: "Alert at S-9",
     enabled: true,
     event: "job.changed",
@@ -110,7 +111,7 @@ async function main(): Promise<void> {
 
   // ---------------------------------------------------------------------------
   console.log("\n6. Disable — disabled automation drops out on reload");
-  store.upsert({ ...created, enabled: false });
+  await store.upsert({ ...created, enabled: false });
   fw.engine.reload();
   const afterDisable = await fw.fire("job.changed", { station: "S-9" });
   check("disabled automation no longer matches", afterDisable.matched.length === 0, afterDisable.matched);
@@ -123,8 +124,9 @@ async function main(): Promise<void> {
 
   // ---------------------------------------------------------------------------
   console.log("\n8. Misconfigured action — fire() throws when matched automation has no handler");
-  store.upsert({
+  await store.upsert({
     id: store.newId(),
+    workspaceId: "dev",
     label: "Broken action",
     enabled: true,
     event: "job.changed",
@@ -139,8 +141,9 @@ async function main(): Promise<void> {
 
   // ---------------------------------------------------------------------------
   console.log("\n8b. Unknown action version — fire() throws when version pin doesn't match a registered handler");
-  store.upsert({
+  await store.upsert({
     id: store.newId(),
+    workspaceId: "dev",
     label: "Broken version pin",
     enabled: true,
     event: "job.changed",

@@ -4,6 +4,7 @@ import { buildCatalog } from "./catalog.js";
 import type { ContextBuilder } from "./context.js";
 import { createAutomationEngine, type AutomationEngine } from "./engine.js";
 import { createSyncIngestRuntime, type IngestRuntime } from "./ingest.js";
+import type { RunRecorder } from "./recorder.js";
 import { createRefRegistry, type RefContext, type RefOption, type RefRegistry } from "./refs.js";
 import type { AutomationStore } from "./store.js";
 import type { ActionSchema, AppEvent, Catalog, EventSchema, EventType } from "./types.js";
@@ -29,6 +30,8 @@ export interface AutomationFrameworkConfig {
    * `ref: { source: ... }`. Startup validation throws if a declared source isn't registered.
    */
   refs?: RefRegistry;
+  /** Audit sink for `fire()` runs. Defaults to `noopRunRecorder` when omitted. */
+  recorder?: RunRecorder;
 }
 
 /** Options for `fire()` — version can be specified to raise as a non-latest schema. */
@@ -125,7 +128,12 @@ export function createAutomationFramework(config: AutomationFrameworkConfig): Au
     }
   }
 
-  const engine = createAutomationEngine({ store, contextBuilders, actions: config.actions });
+  const engine = createAutomationEngine({
+    store,
+    contextBuilders,
+    actions: config.actions,
+    recorder: config.recorder,
+  });
   engine.reload();
   const ingest = createSyncIngestRuntime(engine);
 

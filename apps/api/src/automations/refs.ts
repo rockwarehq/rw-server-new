@@ -24,8 +24,8 @@ const FIXTURE: User[] = [
 
 const BY_ID = new Map(FIXTURE.map((u) => [u.id, u]));
 
-/** Resolve a stored user id to a User. Returns undefined if the id is no longer valid. */
-export function getUserById(id: string): User | undefined {
+/** Resolve a stored user id against the in-memory fixture. Used by the file-mock branch only. */
+export function getFixtureUserById(id: string): User | undefined {
   return BY_ID.get(id);
 }
 

@@ -3,8 +3,12 @@ import { dirname, resolve } from "node:path";
 import type { Automation, AutomationStore } from "@rw/automations";
 import { nanoid } from "nanoid";
 
+/** Synthetic workspace id used by the file-backed mock store (no auth in dev). */
+const DEV_WORKSPACE_ID = "dev";
+
 const seedAutomation: Automation = {
   id: "atm_seed",
+  workspaceId: DEV_WORKSPACE_ID,
   label: "Alert on job change at S-1",
   enabled: true,
   event: "job.changed",
@@ -57,6 +61,7 @@ function migrateLegacy(raw: Record<string, unknown>): Automation {
 
   return {
     ...stage1,
+    workspaceId: typeof stage1.workspaceId === "string" ? stage1.workspaceId : DEV_WORKSPACE_ID,
     eventVersion: typeof stage1.eventVersion === "string" ? stage1.eventVersion : "1",
     actions,
   } as unknown as Automation;
@@ -103,12 +108,14 @@ export function createFileAutomationStore(filePath?: string): AutomationStore {
   return {
     list: () => [...automations.values()],
     get: (id) => automations.get(id),
-    upsert: (t) => {
+    // Writes are sync internally (file I/O); the AutomationStore interface declares them async so
+    // the same shape covers Prisma-backed implementations. Wrapping in async is essentially free.
+    upsert: async (t) => {
       automations.set(t.id, t);
       save();
       return t;
     },
-    remove: (id) => {
+    remove: async (id) => {
       const ok = automations.delete(id);
       if (ok) save();
       return ok;

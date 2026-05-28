@@ -1,12 +1,21 @@
 import { ORPCError } from "@orpc/server";
-import type { AutomationAction } from "@rw/automations";
+import type { AutomationAction, AutomationFramework } from "@rw/automations";
 import * as z from "zod";
 import { getAutomationFramework } from "../automations/index.js";
-import { publicProcedure } from "./middleware.js";
+import { authRequired } from "./middleware.js";
 
-// NOTE: uses `publicProcedure` (no auth) because the framework is backed by a MOCK store today.
-// When the store moves to @rw/db (workspace-scoped), switch these to `authRequired` and thread the
-// workspace context, mirroring the other routers (e.g. metric-catalog.ts).
+// Workspace-scoped: each handler resolves its framework via `context.iam.workspaceId`. The
+// framework is cached per workspace; first call per workspace pays the Prisma initial-load cost.
+
+/**
+ * Pull the workspaceId off iam context. `authRequired` only checks user identity — workspace can
+ * still be undefined when a user isn't acting under a specific workspace — so we guard here.
+ */
+function requireWorkspaceId(context: { iam: { workspaceId?: string } }): string {
+  const id = context.iam.workspaceId;
+  if (!id) throw new ORPCError("UNAUTHORIZED", { message: "No workspace context" });
+  return id;
+}
 
 const conditionsSchema = z.object({
   combinator: z.string(),
@@ -29,10 +38,7 @@ const actionsSchema = z.array(actionSchema).min(1);
  * normalized `AutomationAction[]`. If a client omits `version`, the action's `latest` is filled in.
  * Throws on the first bad action.
  */
-function validateActions(
-  fw: ReturnType<typeof getAutomationFramework>,
-  actions: z.infer<typeof actionsSchema>,
-): AutomationAction[] {
+function validateActions(fw: AutomationFramework, actions: z.infer<typeof actionsSchema>): AutomationAction[] {
   return actions.map((a, idx) => {
     const schema = fw.actionSchemas[a.type];
     if (!schema) {
@@ -57,7 +63,7 @@ function validateActions(
  * Catalog (event + action schemas, facts, variables) for a specific (eventType, actionType) — and
  * optionally specific versions. If a version is omitted, the framework uses each schema's `latest`.
  */
-export const getCatalog = publicProcedure
+export const getCatalog = authRequired
   .input(
     z.object({
       eventType: z.string().min(1),
@@ -66,30 +72,35 @@ export const getCatalog = publicProcedure
       actionVersion: z.string().min(1).optional(),
     }),
   )
-  .handler(async ({ input }) =>
-    getAutomationFramework().catalog(input.eventType, input.actionType, input.eventVersion, input.actionVersion),
-  );
+  .handler(async ({ input, context }) => {
+    const fw = await getAutomationFramework(requireWorkspaceId(context));
+    return fw.catalog(input.eventType, input.actionType, input.eventVersion, input.actionVersion);
+  });
 
 /**
  * Picker options for a ref-typed action input. The editor calls this to populate a dropdown for
  * any `SchemaProperty` declaring `ref: { source }`. Throws BAD_REQUEST if the source isn't
- * registered (which means it isn't referenced by any current schema either — startup validation
- * would have caught that — so this is really a defense against typo'd client calls).
+ * registered (startup validation would have caught a schema-side typo — this is defense against
+ * typo'd client calls).
  */
-export const listRefOptions = publicProcedure
+export const listRefOptions = authRequired
   .input(z.object({ source: z.string().min(1) }))
-  .handler(async ({ input }) => {
+  .handler(async ({ input, context }) => {
+    const fw = await getAutomationFramework(requireWorkspaceId(context));
     try {
-      return await getAutomationFramework().listRefOptions(input.source);
+      return await fw.listRefOptions(input.source);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       throw new ORPCError("BAD_REQUEST", { message: msg });
     }
   });
 
-export const listAutomations = publicProcedure.handler(async () => getAutomationFramework().store.list());
+export const listAutomations = authRequired.handler(async ({ context }) => {
+  const fw = await getAutomationFramework(requireWorkspaceId(context));
+  return fw.store.list();
+});
 
-export const createAutomation = publicProcedure
+export const createAutomation = authRequired
   .input(
     z.object({
       label: z.string().min(1),
@@ -101,8 +112,9 @@ export const createAutomation = publicProcedure
       actions: actionsSchema,
     }),
   )
-  .handler(async ({ input }) => {
-    const fw = getAutomationFramework();
+  .handler(async ({ input, context }) => {
+    const workspaceId = requireWorkspaceId(context);
+    const fw = await getAutomationFramework(workspaceId);
     const eventSchema = fw.eventSchemas[input.event];
     if (!eventSchema) throw new ORPCError("BAD_REQUEST", { message: `unknown event type: "${input.event}"` });
     const eventVersion = input.eventVersion ?? eventSchema.latest;
@@ -113,8 +125,9 @@ export const createAutomation = publicProcedure
     }
     const actions = validateActions(fw, input.actions);
 
-    const automation = fw.store.upsert({
+    const automation = await fw.store.upsert({
       id: fw.store.newId(),
+      workspaceId,
       label: input.label,
       enabled: input.enabled ?? true,
       event: input.event,
@@ -126,7 +139,7 @@ export const createAutomation = publicProcedure
     return automation;
   });
 
-export const updateAutomation = publicProcedure
+export const updateAutomation = authRequired
   .input(
     z.object({
       id: z.string(),
@@ -137,8 +150,8 @@ export const updateAutomation = publicProcedure
       actions: actionsSchema.optional(),
     }),
   )
-  .handler(async ({ input }) => {
-    const fw = getAutomationFramework();
+  .handler(async ({ input, context }) => {
+    const fw = await getAutomationFramework(requireWorkspaceId(context));
     const existing = fw.store.get(input.id);
     if (!existing) throw new ORPCError("NOT_FOUND", { message: "automation not found" });
 
@@ -155,7 +168,7 @@ export const updateAutomation = publicProcedure
 
     const actions = input.actions ? validateActions(fw, input.actions) : existing.actions;
 
-    const updated = fw.store.upsert({
+    const updated = await fw.store.upsert({
       ...existing,
       label: input.label ?? existing.label,
       enabled: input.enabled ?? existing.enabled,
@@ -167,9 +180,9 @@ export const updateAutomation = publicProcedure
     return updated;
   });
 
-export const deleteAutomation = publicProcedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
-  const fw = getAutomationFramework();
-  if (!fw.store.remove(input.id)) throw new ORPCError("NOT_FOUND", { message: "automation not found" });
+export const deleteAutomation = authRequired.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
+  const fw = await getAutomationFramework(requireWorkspaceId(context));
+  if (!(await fw.store.remove(input.id))) throw new ORPCError("NOT_FOUND", { message: "automation not found" });
   fw.engine.reload();
   return { ok: true };
 });

@@ -1,5 +1,6 @@
 import type { ActionHandler } from "@rw/automations";
-import { getUserById } from "../refs.js";
+import { getUserById as getDbUserById } from "@rw/services/automation/users-ref-source";
+import { getFixtureUserById } from "../refs.js";
 
 /**
  * `sendAlert` — logs an alert text and the resolved emails of one or more picked users.
@@ -8,13 +9,21 @@ import { getUserById } from "../refs.js";
  * ids; the handler resolves them to `User` objects at run time (no framework hydration today,
  * see @rw/automations README "Ref data sources").
  *
+ * User lookup is workspaceId-dispatched: the e2e uses workspaceId `"dev"` against the in-memory
+ * fixture in `refs.ts`; real workspaces hit Postgres via `@rw/services/automation/users-ref-source`.
+ * This keeps the e2e DB-free while production reads the workspace's actual members.
+ *
  * Add a new version (e.g. switch from a flat `recipientUserIds` to a structured
  * `{ to: [ids], cc: [ids] }`) by adding a `"2"` entry; v1 automations keep running against the v1
  * handler. Bump `latest` when the editor should default to the new version for new automations.
- *
- * Replace this with a real `sendEmail` handler by writing a sibling module and adding it to
- * `actions/index.ts`.
  */
+async function lookupUser(workspaceId: string, id: string): Promise<{ name: string; email: string } | undefined> {
+  if (workspaceId === "dev") {
+    return getFixtureUserById(id);
+  }
+  return getDbUserById(workspaceId, id);
+}
+
 export const handler: ActionHandler = {
   type: "sendAlert",
   displayName: "Send Alert",
@@ -40,13 +49,13 @@ export const handler: ActionHandler = {
           },
         },
       },
-      run(inputs, ctx) {
+      async run(inputs, ctx) {
         const text = String(inputs.text ?? "");
         const ids = Array.isArray(inputs.recipientUserIds) ? inputs.recipientUserIds.map(String) : [];
 
         const recipients: string[] = [];
         for (const id of ids) {
-          const user = getUserById(id);
+          const user = await lookupUser(ctx.automation.workspaceId, id);
           if (user) recipients.push(`${user.name} <${user.email}>`);
           else console.warn(`[automations] sendAlert: unknown user id "${id}" — skipped`);
         }

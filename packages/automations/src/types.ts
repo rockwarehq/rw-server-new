@@ -137,6 +137,8 @@ export interface AutomationAction {
  */
 export interface Automation {
   id: string;
+  /** Workspace that owns this automation. Handlers see it via `ctx.automation.workspaceId`. */
+  workspaceId: string;
   label: string;
   enabled: boolean;
   event: EventType;

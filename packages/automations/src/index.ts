@@ -26,6 +26,13 @@ export { interpolateInputs, type VariableContext } from "./interpolate.js";
 export { type EngineCondition, OPERATOR_MAP, QB_OPERATORS, qbToEngineConditions } from "./qb-to-engine.js";
 export type { RuleGroupType, RuleType } from "./query-builder-types.js";
 export {
+  type FinishRunInput,
+  noopRunRecorder,
+  type RecordActionInput,
+  type RunRecorder,
+  type StartRunInput,
+} from "./recorder.js";
+export {
   createRefRegistry,
   type RefContext,
   type RefOption,
