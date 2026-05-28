@@ -4,6 +4,7 @@
     { "path": "./packages/db" },
     { "path": "./packages/services" },
     { "path": "./packages/runtime" },
+    { "path": "./packages/triggers" },
     { "path": "./apps/workers" }
   ]
 }

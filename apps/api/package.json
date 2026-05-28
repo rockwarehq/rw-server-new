@@ -30,6 +30,7 @@
     "@rw/db": "workspace:*",
     "@rw/runtime": "workspace:*",
     "@rw/services": "workspace:*",
+    "@rw/triggers": "workspace:*",
     "ajv": "^8.17.1",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.66.5",

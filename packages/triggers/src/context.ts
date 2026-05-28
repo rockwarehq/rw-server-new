@@ -15,7 +15,24 @@ export interface ContextBuilder {
   build(event: AppEvent): FactMap | Promise<FactMap>;
 }
 
-/** Flatten the event into facts: `event.type` + `event.payload.*`. No external state. */
+/** Flatten the event into facts: `event.type` + `event.payload.*`. No external state. 
+ * Example:
+   event = {
+    id: "a1b2c3d4",
+    type: "job.changed",
+    ts: "2026-05-28T15:00:00Z",
+    payload: { previousJob: "J-100", currentJob: "J-200", station: "S-1" },
+  }
+
+  it produces:
+
+  {
+    "event.type": "job.changed",
+    "event.payload.previousJob": "J-100",
+    "event.payload.currentJob": "J-200",
+    "event.payload.station": "S-1",
+  }
+*/
 export const statelessContextBuilder: ContextBuilder = {
   build(event: AppEvent): FactMap {
     const facts: FactMap = { "event.type": event.type };

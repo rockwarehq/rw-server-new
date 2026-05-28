@@ -1,8 +1,15 @@
 # End-to-end trace
 
 A concrete, value-by-value walk of **one event** through the framework, using the
-seed trigger. Read alongside the diagrams in [`README.md`](./README.md) ("How an event
-flows") — the diagrams show the shape, this shows the actual data at each step.
+seed trigger. Read alongside the flow diagram in
+[`@rw/triggers`](../../../../packages/triggers/README.md#how-an-event-flows) — that shows the
+shape, this shows the actual data at each step.
+
+> **Where the files live.** The engine steps (validation, dispatch, fact-building, condition
+> evaluation, action execution) run in the **`@rw/triggers`** package. Only the *domain* pieces —
+> the seed trigger (`store.ts`), the schemas (`catalog.ts`), the `sendAlert` handler (`actions.ts`),
+> and the wiring (`registry.ts` / `index.ts`) — live in this app folder. File references below note
+> the package where relevant.
 
 ## Given: the seed trigger (already loaded)
 
@@ -19,17 +26,38 @@ trigger id (`event: { type: "trg_seed" }`):
   conditions: { combinator: "and", rules: [
     { field: "event.payload.station", operator: "=", value: "S-1" },
   ] },
-  action: { type: "sendAlert", inputs: {
-    text: "Job changed from {{event.payload.previousJob}} to {{event.payload.currentJob}} at {{event.payload.station}}",
-    emails: ["supervisor@example.com"],
-  } },
+  actions: [
+    {
+      type: "sendAlert",
+      inputs: {
+        text: "Job changed from {{event.payload.previousJob}} to {{event.payload.currentJob}} at {{event.payload.station}}",
+        emails: ["supervisor@example.com"],
+      },
+    },
+    {
+      type: "sendAlert",
+      inputs: {
+        text: "FYI: shift lead notified of change at {{event.payload.station}}",
+        emails: ["shift-lead@example.com"],
+      },
+    },
+  ],
 }
 ```
+
+> **Note — triggers are held in memory; updating one needs a reload.** Two in-memory
+> stores back this: the trigger *definitions* in the mock `TriggerStore` (`store.ts`, this app,
+> file-backed for now, `@rw/db` later) and the *compiled* condition engines
+> (`this.engines`, `engine.ts` in @rw/triggers) built from them. Neither picks up changes on its
+> own — a create/update/delete must call `engine.reload()` to rebuild the engines from the
+> store. The RPC handlers (`rpc/triggers.ts`) do this after every mutation; a write
+> that bypasses them leaves evaluation running against the old rules until the next
+> reload, and a disabled trigger is only dropped from the engines on that reload.
 
 ## When: we raise an event
 
 ```ts
-const result = await fw.fire("job.changed", {
+const { eventId, matched } = await fw.fire("job.changed", {
   previousJob: "J-100",
   currentJob: "J-200",
   station: "S-1",
@@ -38,16 +66,17 @@ const result = await fw.fire("job.changed", {
 
 ## The trace
 
-### 1. `fire()` validates the payload — `index.ts`
-Calls `validateEventPayload("job.changed", payload)` (`validate.ts`):
+### 1. `fire()` validates the payload — `framework.ts` (@rw/triggers)
+Calls `validateEventPayload("job.changed", payload)` (`validate.ts`, @rw/triggers):
 - looks up `EVENT_SCHEMAS["job.changed"]` (`catalog.ts`) — found.
 - runs the cached zod validator → **ok**, returns the normalized value:
   ```ts
   { previousJob: "J-100", currentJob: "J-200", station: "S-1" }
   ```
-If it were invalid, `fire()` would return `{ ok: false, error }` here and stop.
+If it were invalid, `validateEventPayload` would `throw new Error(...)` here and `fire()` would
+propagate the throw — no event built, the engine never touched.
 
-### 2. `fire()` builds the event — `index.ts`
+### 2. `fire()` builds the event — `framework.ts` (@rw/triggers)
 Wraps the normalized payload in an `AppEvent` envelope (generates `id` + `ts`):
 ```ts
 {
@@ -58,16 +87,16 @@ Wraps the normalized payload in an `AppEvent` envelope (generates `id` + `ts`):
 }
 ```
 
-### 3. `ingest.submit(event)` — `ingest.ts` (SEAM B)
+### 3. `ingest.submit(event)` — `ingest.ts`, @rw/triggers (SEAM B)
 `SyncIngestRuntime` forwards straight to `engine.dispatch(event, notify)`. (Swap this
 seam for a queue later; the engine call is unchanged.)
 
-### 4. `dispatch()` announces + routes — `engine.ts`
-- `notify({ type: "eventReceived", event })` → lifecycle ping.
+### 4. `dispatch()` routes — `engine.ts` (@rw/triggers)
 - `this.engines.get("job.changed")` → the condition engine holding this type's triggers.
-  (No engine for the type → `return []`, and `fire()` resolves `{ ok: true, matched: [] }`.)
+  (No engine for the type → `return []`, and `fire()` resolves to `{ eventId, matched: [] }` —
+  legitimately empty, not an error.)
 
-### 5. `dispatch()` builds facts — `context.ts` (SEAM A)
+### 5. `dispatch()` builds facts — `context.ts`, @rw/triggers (SEAM A)
 `statelessContextBuilder.build(event)` flattens the event into the fact map:
 ```ts
 {
@@ -78,63 +107,77 @@ seam for a queue later; the engine call is unchanged.)
 }
 ```
 
-### 6. `engine.run(facts)` evaluates conditions — `engine.ts` → json-rules-engine
+### 6. `engine.run(facts)` evaluates conditions — `engine.ts` (@rw/triggers) → json-rules-engine
 The seed rule's condition is `{ all: [{ fact: "event.payload.station", operator: "equal", value: "S-1" }] }`.
 The fact `"event.payload.station"` is `"S-1"` → **passes**. `results` comes back with one
 entry carrying `event: { type: "trg_seed" }`.
 
-### 7. `dispatch()` maps the result back to a trigger — `engine.ts`
+### 7. `dispatch()` maps the result back to a trigger — `engine.ts` (@rw/triggers)
 - `triggerId = "trg_seed"`.
 - `store.get("trg_seed")` → the full trigger (re-fetched because the rule only carried the id).
 - `matched.push("trg_seed")`.
-- `notify({ type: "triggerFired", triggerId: "trg_seed", label: "Alert on job change at S-1", eventId: "a1b2c3d4" })`.
-- `await runAction(trigger, event, notify)` → step 8.
+- `await runActions(trigger, event)` → step 8 (iterates `trigger.actions` in order; this seed trigger has exactly one).
 
-### 8. `runAction()` executes the action — `engine.ts` (SEAM C)
-1. `actions.get("sendAlert")` → `sendAlertHandler` (`actions.ts`).
-2. `interpolateInputs(action.inputs, { event })` (`interpolate.ts`) resolves the `{{...}}`:
+### 8. `runActions()` executes each action — `engine.ts`, @rw/triggers (SEAM C)
+The loop iterates `trigger.actions` in order. The seed has **two** actions, so the loop runs twice.
+
+**Action #0 (supervisor alert):**
+1. `actions.get("sendAlert")` → `sendAlertHandler` (`actions.ts`, this app).
+2. `interpolateInputs(action.inputs, { event })` (`interpolate.ts`, @rw/triggers) resolves the `{{...}}`:
    ```ts
    {
      text: "Job changed from J-100 to J-200 at S-1",
      emails: ["supervisor@example.com"],
    }
    ```
-3. `missingRequired(inputs, handler.inputSchema)` — `sendAlert` requires `["text","emails"]`; both present → `null` (ok).
-4. `await handler.run(inputs, { trigger, eventId: "a1b2c3d4", notify })`:
+3. `missingRequired(inputs, handler.inputSchema)` — `sendAlert` requires `["text","emails"]`; both present → `null` (ok). (If either were missing, `runActions` would throw and abort the dispatch loop. The throw names the action index + type — e.g. `action #0 ("sendAlert"): missing required input "emails"` — so you can tell which action of which trigger failed.)
+4. `await handler.run(inputs, { trigger, eventId: "a1b2c3d4" })`:
    - logs: `[triggers] ALERT (Alert on job change at S-1): Job changed from J-100 to J-200 at S-1 -> supervisor@example.com`
-   - `notify({ type: "actionRan", triggerId: "trg_seed", action: "sendAlert", eventId: "a1b2c3d4" })`.
+
+**Action #1 (shift-lead alert):**
+The same handler is resolved (both actions are `sendAlert` here), with different inputs interpolated from this action's template:
+   ```ts
+   { text: "FYI: shift lead notified of change at S-1", emails: ["shift-lead@example.com"] }
+   ```
+- logs: `[triggers] ALERT (Alert on job change at S-1): FYI: shift lead notified of change at S-1 -> shift-lead@example.com`
+
+The loop then exits (no more actions on this trigger) and `dispatch` moves on to any other matched triggers.
 
 ### 9. Unwind — back to the caller
 ```
-runAction resolves
+runActions resolves
   └─ dispatch loop ends → returns ["trg_seed"]
        └─ ingest.submit resolves
             └─ fire() returns:
-               { ok: true, eventId: "a1b2c3d4", matched: ["trg_seed"] }
+               { eventId: "a1b2c3d4", matched: ["trg_seed"] }
 ```
 
-Three lifecycle notifications were emitted to the `notify` sink along the way:
-`eventReceived` → `triggerFired` → `actionRan`. (The default console logger only prints
-`triggerFired`; point the sink at WS/SSE/audit to use the others.)
+The action's `console.log` line is the only effect observable from outside — there is no
+lifecycle-notification sink at this layer. (A future observability seam can be added as a
+parameter to `dispatch` / `runActions` when needed.)
 
 ## The same event, three other outcomes
 
 - **Condition doesn't match** — `station: "S-2"`. Steps 1–6 run; the rule fails at step 6,
   `results` is empty, nothing is pushed to `matched`. `fire()` returns
-  `{ ok: true, eventId, matched: [] }`. (Valid event, just nobody cared.)
+  `{ eventId, matched: [] }`. (Valid event, just nobody cared — not an error.)
 
 - **Invalid payload** — `station: 123` (a number, schema wants a string). Step 1 fails;
-  `fire()` returns `{ ok: false, error: "station: Expected string, received number" }`.
-  No event is built, the engine is never touched.
+  `validateEventPayload` throws `Error("station: Expected string, received number")` and `fire()`
+  propagates the throw. No event is built, the engine is never touched.
 
 - **Unknown event type** — `fire("foo.bar", {})`. Step 1's catalog lookup misses;
-  `fire()` returns `{ ok: false, error: "unknown event type: foo.bar" }`.
+  `validateEventPayload` throws `Error("unknown event type: foo.bar")`.
 
-## Misconfigured-but-matching trigger (the `matched` caveat)
+## Misconfigured-but-matching trigger
 
-If the seed trigger's conditions matched but its action were broken (e.g. action type
-`"sendSms"` with no registered handler, or a required input left empty), step 8 logs a
-warning and returns *without throwing*. Because `matched.push(...)` happened in step 7
-**before** `runAction`, the id is still in `matched`. So `matched` means "conditions
-passed and the action was attempted," not "the action ran successfully" — use the
-`actionRan` notification if you need a true success signal.
+If the seed trigger's conditions matched but one of its actions were broken (e.g. an `"sendSms"`
+action with no registered handler, or a required input left empty), step 8 **throws** at that
+action — `runActions` raises an error naming the trigger label, id, action index, and action type
+— which propagates out of `dispatch` and out of `fire()`. `matched.push(...)` happens before
+`runActions` is called, but `fire()` never returns the array; the caller sees the throw.
+
+Any **earlier** actions on the same trigger already ran (and their side effects, like a logged
+ALERT, persist). Subsequent actions on the trigger don't run, and if a *later* matched trigger had
+its own actions to run for the same event, those don't run either — the throw aborts the whole
+dispatch loop. The next call to `fire()` starts fresh.

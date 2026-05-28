@@ -79,14 +79,18 @@ export interface TriggerAction {
   inputs: Record<string, unknown>;
 }
 
-/** A trigger: tied to a single event, a condition predicate, and one action. */
+/**
+ * A trigger: tied to a single event, a condition predicate, and one or more actions.
+ * Actions run sequentially when conditions match; if action N throws, actions N+1… don't run
+ * for that event (the throw aborts the dispatch loop for the trigger).
+ */
 export interface Trigger {
   id: string;
   label: string;
   enabled: boolean;
   event: EventType;
   conditions: RuleGroupType;
-  action: TriggerAction;
+  actions: TriggerAction[];
 }
 
 /** Everything the editor UI needs to render itself, served over the API. */
@@ -100,12 +104,3 @@ export interface Catalog {
   variables: TemplateVariable[];
   operators: string[];
 }
-
-/** Lifecycle notifications emitted as events flow through the engine (observability sink). */
-export type TriggerNotification =
-  | { type: "eventReceived"; event: AppEvent }
-  | { type: "triggerFired"; triggerId: string; label: string; eventId: string }
-  | { type: "actionRan"; triggerId: string; action: string; eventId: string };
-
-/** Sink for lifecycle notifications. Defaults to a console logger; swap for WS/SSE later. */
-export type Notify = (n: TriggerNotification) => void;

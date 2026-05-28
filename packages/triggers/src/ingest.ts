@@ -1,5 +1,5 @@
 import type { TriggerEngine } from "./engine.js";
-import type { AppEvent, Notify } from "./types.js";
+import type { AppEvent } from "./types.js";
 
 /**
  * SEAM B — how events get from the edge into the engine. Returns the ids of triggers that fired.
@@ -13,13 +13,10 @@ export interface IngestRuntime {
 }
 
 /** Evaluate inline, on the calling request/worker. */
-export class SyncIngestRuntime implements IngestRuntime {
-  constructor(
-    private readonly engine: TriggerEngine,
-    private readonly notify: Notify,
-  ) {}
-
-  submit(event: AppEvent): Promise<string[]> {
-    return this.engine.dispatch(event, this.notify);
-  }
+export function createSyncIngestRuntime(engine: TriggerEngine): IngestRuntime {
+  return {
+    submit(event) {
+      return engine.dispatch(event);
+    },
+  };
 }

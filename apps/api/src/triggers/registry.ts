@@ -1,26 +1,28 @@
-import { ActionRegistry, sendAlertHandler } from "./actions.js";
-import { type ContextBuilder, statelessContextBuilder } from "./context.js";
-import type { EventType } from "./types.js";
+import {
+  type ActionRegistry,
+  type ContextBuilder,
+  createActionRegistry,
+  type EventType,
+  statelessContextBuilder,
+} from "@rw/triggers";
+import { sendAlertHandler } from "./actions.js";
 
 /**
- * Composition root — the ONE place to extend the framework.
+ * Composition root — the ONE place to extend the framework with new behavior.
  *
  * Map each event type to the ContextBuilder that turns it into facts, and register action
- * handlers. To add a real business action (sendEmail, createForm) or a new event type, edit here
- * + the catalog schemas; the engine, ingestion, and validation stay untouched.
+ * handlers. To add a real business action (sendEmail, createForm) or a new event
+ * type, edit here + the catalog schemas;
  */
 
-export function buildContextBuilders(): {
-  contextBuilders: Map<EventType, ContextBuilder>;
-  defaultContextBuilder: ContextBuilder;
-} {
-  const contextBuilders = new Map<EventType, ContextBuilder>();
-  contextBuilders.set("job.changed", statelessContextBuilder);
-  // Later: contextBuilders.set("point.reading", snapshotContextBuilder);
-  return { contextBuilders, defaultContextBuilder: statelessContextBuilder };
+export function buildContextBuilders(): Record<EventType, ContextBuilder> {
+  return {
+    "job.changed": statelessContextBuilder,
+    // Later: "point.reading": snapshotContextBuilder,
+  };
 }
 
 export function buildActionRegistry(): ActionRegistry {
-  return new ActionRegistry().register(sendAlertHandler);
+  return createActionRegistry().register(sendAlertHandler);
   // Later: .register(createFormHandler).register(sendEmailHandler);
 }
