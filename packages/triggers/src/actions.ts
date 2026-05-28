@@ -6,16 +6,29 @@ export interface ActionContext {
   eventId: string;
 }
 
+/** One version's behavior: input shape + run function. Schema and run can't drift — they live in the same object. */
+export interface ActionVersion {
+  inputSchema: ActionInputSchema;
+  run(inputs: Record<string, unknown>, ctx: ActionContext): void | Promise<void>;
+}
+
 /**
- * SEAM C — a runnable action. `inputSchema` drives validation (and the editor UI); `run` does the
- * work. Register handlers (sendAlert, createForm, sendEmail, …) in the consuming app's composition
- * root — the engine resolves the handler by `trigger.action.type`, so adding an action never
- * touches the engine.
+ * SEAM C — a runnable action with one or more versions. Each entry in `versions` is a
+ * self-contained `(inputSchema, run)` pair; stored triggers pin a specific version via
+ * `TriggerAction.version`, and dispatch resolves the handler with a strict `(type, version)` lookup.
+ *
+ * Register actions (sendAlert, createForm, sendEmail, …) in the consuming app's composition root.
+ * Adding a new version of an existing action = add a `versions[<v>]` entry; the framework keeps
+ * old versions working as long as their key stays in the map.
  */
 export interface ActionHandler {
   type: string;
-  inputSchema: ActionInputSchema;
-  run(inputs: Record<string, unknown>, ctx: ActionContext): void | Promise<void>;
+  /** Editor-facing label, mirrored onto the derived `ActionSchema` for the catalog. */
+  displayName: string;
+  /** Version key used when authoring a NEW trigger. Must be a key in `versions`. */
+  latest: string;
+  /** All known versions of this action's behavior, keyed by version. */
+  versions: Record<string, ActionVersion>;
 }
 
 /** Returns the first missing required input key, or null if all required inputs are present. */
@@ -29,12 +42,18 @@ export function missingRequired(inputs: Record<string, unknown>, schema: ActionI
   return null;
 }
 
-/** A registry of action handlers, keyed by `type`. */
+/** A registry of action handlers, keyed by `type`. Per-version lookup happens on `get`. */
 export interface ActionRegistry {
-  /** Add a handler. Returns the registry so calls can be chained. */
+  /** Add a handler (with all its versions). Returns the registry so calls can be chained. */
   register(handler: ActionHandler): ActionRegistry;
-  /** Look up a handler by its action type. */
-  get(type: string): ActionHandler | undefined;
+  /** Look up a specific version of a handler. Returns undefined if the type OR the version isn't registered. */
+  get(type: string, version: string): ActionVersion | undefined;
+  /** The `latest` pointer for a type, or undefined if the type isn't registered. */
+  latest(type: string): string | undefined;
+  /** All registered action types (for startup validation + introspection). */
+  types(): string[];
+  /** All registered (type, version) pairs (for startup validation + introspection). */
+  entries(): Array<{ type: string; version: string }>;
 }
 
 export function createActionRegistry(): ActionRegistry {
@@ -44,8 +63,21 @@ export function createActionRegistry(): ActionRegistry {
       handlers.set(handler.type, handler);
       return registry;
     },
-    get(type) {
-      return handlers.get(type);
+    get(type, version) {
+      return handlers.get(type)?.versions[version];
+    },
+    latest(type) {
+      return handlers.get(type)?.latest;
+    },
+    types() {
+      return [...handlers.keys()];
+    },
+    entries() {
+      const out: Array<{ type: string; version: string }> = [];
+      for (const [type, h] of handlers) {
+        for (const v of Object.keys(h.versions)) out.push({ type, version: v });
+      }
+      return out;
     },
   };
   return registry;

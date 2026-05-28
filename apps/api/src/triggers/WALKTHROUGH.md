@@ -24,12 +24,14 @@ trigger id (`event: { type: "trg_seed" }`):
   label: "Alert on job change at S-1",
   enabled: true,
   event: "job.changed",
+  eventVersion: "1",                                 // ← pinned to v1 of the event payload shape
   conditions: { combinator: "and", rules: [
     { field: "event.payload.station", operator: "=", value: "S-1" },
   ] },
   actions: [
     {
       type: "sendAlert",
+      version: "1",                                  // ← pinned to sendAlert v1's inputSchema + run
       inputs: {
         text: "Job changed from {{event.payload.previousJob}} to {{event.payload.currentJob}} at {{event.payload.station}}",
         recipientUserIds: ["u_supervisor"],
@@ -37,6 +39,7 @@ trigger id (`event: { type: "trg_seed" }`):
     },
     {
       type: "sendAlert",
+      version: "1",
       inputs: {
         text: "FYI: shift lead notified of change at {{event.payload.station}}",
         recipientUserIds: ["u_shift_lead"],
@@ -45,6 +48,12 @@ trigger id (`event: { type: "trg_seed" }`):
   ],
 }
 ```
+
+> **Version pins.** Each `TriggerAction.version` is strict-matched against the action handler's
+> registered versions at dispatch time. `eventVersion` is informational at dispatch (conditions
+> evaluate against whatever payload was raised); the editor uses it to render the right form when
+> the trigger is opened for editing. See the package
+> [README → "Versioning"](../../../../packages/triggers/README.md#versioning).
 
 > **Recipients are stored as user ids, not emails.** `sendAlert.recipientUserIds` declares
 > `ref: { source: "users" }` on its schema property (see `actions/send-alert.ts`); the editor renders a picker
@@ -74,10 +83,11 @@ const { eventId, matched } = await fw.fire("job.changed", {
 
 ## The trace
 
-### 1. `fire()` validates the payload — `framework.ts` (@rw/triggers)
-Calls `validateEventPayload("job.changed", payload)` (`validate.ts`, @rw/triggers):
-- looks up `EVENT_SCHEMAS["job.changed"]` (aggregated from `events/job-changed.ts` by `events/index.ts`) — found.
-- runs the cached zod validator → **ok**, returns the normalized value:
+### 1. `fire()` resolves the version + validates the payload — `framework.ts` (@rw/triggers)
+- The caller didn't pass `opts.version`, so the framework uses the event's `latest` ("1").
+- Calls `validateEventPayload("job.changed", "1", payload)` (`validate.ts`, @rw/triggers).
+- Looks up `EVENT_SCHEMAS["job.changed"].versions["1"]` (aggregated from `events/job-changed.ts` by `events/index.ts`) — found.
+- Runs the cached zod validator (built once per `(type, version)`) → **ok**, returns the normalized value:
   ```ts
   { previousJob: "J-100", currentJob: "J-200", station: "S-1" }
   ```
@@ -85,11 +95,12 @@ If it were invalid, `validateEventPayload` would `throw new Error(...)` here and
 propagate the throw — no event built, the engine never touched.
 
 ### 2. `fire()` builds the event — `framework.ts` (@rw/triggers)
-Wraps the normalized payload in an `AppEvent` envelope (generates `id` + `ts`):
+Wraps the normalized payload in an `AppEvent` envelope (generates `id`, stamps `version` + `ts`):
 ```ts
 {
   id: "a1b2c3d4",                       // nanoid(8)
   type: "job.changed",
+  version: "1",                         // resolved from opts.version ?? eventSchema.latest
   ts: "2026-05-27T15:00:00.000Z",       // new Date().toISOString()
   payload: { previousJob: "J-100", currentJob: "J-200", station: "S-1" },
 }
@@ -130,7 +141,7 @@ entry carrying `event: { type: "trg_seed" }`.
 The loop iterates `trigger.actions` in order. The seed has **two** actions, so the loop runs twice.
 
 **Action #0 (supervisor alert):**
-1. `actions.get("sendAlert")` → `handler` exported from `actions/send-alert.ts` (this app).
+1. `actions.get("sendAlert", "1")` → the v1 `ActionVersion` (`{ inputSchema, run }`) from the `handler` exported by `actions/send-alert.ts` (this app). Lookup is STRICT — an unknown version would throw with the failing `sendAlert@<version>` named.
 2. `interpolateInputs(action.inputs, { event })` (`interpolate.ts`, @rw/triggers) resolves the `{{...}}`. User-id arrays don't contain templates, so they pass through untouched:
    ```ts
    {
@@ -138,8 +149,8 @@ The loop iterates `trigger.actions` in order. The seed has **two** actions, so t
      recipientUserIds: ["u_supervisor"],
    }
    ```
-3. `missingRequired(inputs, handler.inputSchema)` — `sendAlert` requires `["text","recipientUserIds"]`; both present → `null` (ok). (If either were missing, `runActions` would throw and abort the dispatch loop. The throw names the action index + type — e.g. `action #0 ("sendAlert"): missing required input "recipientUserIds"` — so you can tell which action of which trigger failed.)
-4. `await handler.run(inputs, { trigger, eventId: "a1b2c3d4" })`:
+3. `missingRequired(inputs, versioned.inputSchema)` — looked up via `actions.get("sendAlert", "1")`, which returns the v1 `{ inputSchema, run }` pair. v1 requires `["text","recipientUserIds"]`; both present → `null` (ok). (If either were missing, `runActions` would throw and abort the dispatch loop. The throw names the action index + `type@version` — e.g. `action #0 ("sendAlert@1"): missing required input "recipientUserIds"` — so you can tell which action of which trigger failed.)
+4. `await versioned.run(inputs, { trigger, eventId: "a1b2c3d4" })`:
    - Inside the handler, each id is resolved via `getUserById("u_supervisor")` → `{ id, name: "Sam Supervisor", email: "supervisor@example.com" }`. Unknown ids are skipped with a `console.warn` and don't appear in the log line.
    - logs: `[triggers] ALERT (Alert on job change at S-1): Job changed from J-100 to J-200 at S-1 -> Sam Supervisor <supervisor@example.com>`
 

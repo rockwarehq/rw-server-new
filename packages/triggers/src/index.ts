@@ -8,13 +8,19 @@ export {
   type ActionContext,
   type ActionHandler,
   type ActionRegistry,
+  type ActionVersion,
   createActionRegistry,
   missingRequired,
 } from "./actions.js";
 export { buildCatalog } from "./catalog.js";
 export { type ContextBuilder, statelessContextBuilder } from "./context.js";
 export { createTriggerEngine, type EngineDeps, type TriggerEngine } from "./engine.js";
-export { createTriggerFramework, type TriggerFramework, type TriggerFrameworkConfig } from "./framework.js";
+export {
+  createTriggerFramework,
+  type FireOptions,
+  type TriggerFramework,
+  type TriggerFrameworkConfig,
+} from "./framework.js";
 export { createSyncIngestRuntime, type IngestRuntime } from "./ingest.js";
 export { interpolateInputs, type VariableContext } from "./interpolate.js";
 export { type EngineCondition, OPERATOR_MAP, QB_OPERATORS, qbToEngineConditions } from "./qb-to-engine.js";
@@ -31,9 +37,11 @@ export type { TriggerStore } from "./store.js";
 export type {
   ActionInputSchema,
   ActionSchema,
+  ActionSchemaVersion,
   AppEvent,
   Catalog,
   EventSchema,
+  EventSchemaVersion,
   EventType,
   FactDef,
   FactMap,

@@ -18,6 +18,8 @@ export type EventType = string;
 export interface AppEvent {
   id: string;
   type: EventType;
+  /** Schema version this payload was raised against (defaults to the event's `latest` at fire time). */
+  version: string;
   ts: string;
   payload: Record<string, unknown>;
 }
@@ -64,18 +66,47 @@ export interface ActionInputSchema {
   properties: Record<string, SchemaProperty>;
 }
 
-/** Declares an event type and the shape of its payload. */
-export interface EventSchema {
-  type: EventType;
-  displayName: string;
+// =============================================================================
+// VERSIONED SCHEMAS
+// -----------------------------------------------------------------------------
+// Each event type / action type carries a `latest` pointer and a `versions` map.
+// Stored triggers pin the exact version they were authored against:
+//   - `Trigger.eventVersion` + `TriggerAction.version` are the pins.
+//   - `AppEvent.version` is set at raise time (defaults to the event's `latest`).
+// Authoring a NEW trigger uses `latest` for both. Dispatch resolution: STRICT for
+// action handler lookup (must match a registered version), LENIENT for event
+// version (conditions evaluate against the actual raised payload regardless of
+// the trigger's pinned event version — silent mismatches surface in run history).
+// =============================================================================
+
+/** One version's payload shape for an event type. */
+export interface EventSchemaVersion {
   payload: Record<string, SchemaProperty>;
 }
 
-/** Declares an action type and the shape of its inputs. */
+/** Declares an event type and the shape of its payload across versions. */
+export interface EventSchema {
+  type: EventType;
+  displayName: string;
+  /** Version key the editor / `fire()` use when the caller doesn't pick one. Must be a key in `versions`. */
+  latest: string;
+  /** All known versions of this event's payload shape, keyed by version. */
+  versions: Record<string, EventSchemaVersion>;
+}
+
+/** One version's input shape for an action type. */
+export interface ActionSchemaVersion {
+  inputSchema: ActionInputSchema;
+}
+
+/** Declares an action type and the shape of its inputs across versions. */
 export interface ActionSchema {
   type: string;
   displayName: string;
-  inputSchema: ActionInputSchema;
+  /** Version key the editor uses when authoring a new trigger. Must be a key in `versions`. */
+  latest: string;
+  /** All known versions of this action's input shape, keyed by version. */
+  versions: Record<string, ActionSchemaVersion>;
 }
 
 /** A template variable users can insert into action inputs. */
@@ -86,34 +117,46 @@ export interface TemplateVariable {
 }
 
 /**
- * A trigger's action: a registered action `type` plus its inputs. Inputs are an
- * open record so any action's shape can be carried without a per-action type —
- * validation is derived from the action's inputSchema (see schema-to-zod.ts).
+ * A trigger's action: a registered action `type` + version pin + its inputs. Inputs are an
+ * open record so any action's shape can be carried without a per-action type — validation is
+ * derived from the version-specific inputSchema (see schema-to-zod.ts).
  */
 export interface TriggerAction {
   type: string;
+  /** Action schema version this input was authored against; strict-resolved to a handler at dispatch. */
+  version: string;
   inputs: Record<string, unknown>;
 }
 
 /**
- * A trigger: tied to a single event, a condition predicate, and one or more actions.
- * Actions run sequentially when conditions match; if action N throws, actions N+1… don't run
- * for that event (the throw aborts the dispatch loop for the trigger).
+ * A trigger: tied to a single event (pinned to a version), a condition predicate, and one or
+ * more actions (each pinned to its own version). Actions run sequentially when conditions match;
+ * if action N throws, actions N+1… don't run for that event (the throw aborts the dispatch loop
+ * for the trigger).
  */
 export interface Trigger {
   id: string;
   label: string;
   enabled: boolean;
   event: EventType;
+  /** Event schema version this trigger was authored against. Informational at dispatch; used for editor + audit. */
+  eventVersion: string;
   conditions: RuleGroupType;
   actions: TriggerAction[];
 }
 
-/** Everything the editor UI needs to render itself, served over the API. */
+/**
+ * Everything the editor UI needs to render itself for a specific (event version, action version)
+ * pair, served over the API. Facts + variables reflect the chosen event version's payload.
+ */
 export interface Catalog {
   event: EventSchema;
+  /** The selected version of the event (must be a key in `event.versions`). */
+  eventVersion: string;
   /** The default action (convenience). */
   action: ActionSchema;
+  /** The selected version of the action (must be a key in `action.versions`). */
+  actionVersion: string;
   /** Every action the editor can offer — the form renders from the selected one. */
   actions: ActionSchema[];
   facts: FactDef[];

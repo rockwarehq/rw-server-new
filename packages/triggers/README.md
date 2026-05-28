@@ -50,6 +50,67 @@ The returned framework exposes `store`, `engine`, `ingest`, `catalog()`,
 For a step-by-step guide that builds this config from scratch (declare schemas → write a handler →
 wire → assemble → author → fire), see [`WALKTHROUGH.md`](./WALKTHROUGH.md).
 
+## Versioning
+
+Schemas and handlers are versioned. Every `EventSchema` and `ActionSchema` carries a `latest`
+pointer and a `versions` map. Each `ActionHandler` carries `versions: Record<string, ActionVersion>`
+where `ActionVersion = { inputSchema, run }` — schema and behavior for one version live together
+and can't drift. Old versions stay in the map as long as any trigger pins them.
+
+```ts
+// Action module — one file, all versions inside.
+export const handler: ActionHandler = {
+  type: "sendAlert",
+  displayName: "Send Alert",
+  latest: "1",
+  versions: {
+    "1": {
+      inputSchema: { /* v1 inputs */ },
+      run(inputs, ctx) { /* v1 behavior */ },
+    },
+    // "2": { inputSchema: {...}, run: ... },  ← future
+  },
+};
+```
+
+Stored triggers pin to versions:
+
+```ts
+{
+  event: "job.changed",
+  eventVersion: "1",                                            // ← pin
+  actions: [
+    { type: "sendAlert", version: "1", inputs: {/* … */} },     // ← per-action pin
+  ],
+}
+```
+
+**Resolution rules:**
+
+- **Action handler lookup is STRICT** — `actions.get(type, version)` must match a registered
+  version exactly. A trigger pinned to an unknown version throws at dispatch with the failing
+  `type@version` named.
+- **Event version at dispatch is LENIENT** — conditions evaluate against whatever payload was
+  raised (`AppEvent.version` is set by the caller via `fire(type, payload, { version })` or
+  defaults to the event's `latest`). The trigger's `eventVersion` is informational/audit; it does
+  not gate which events the trigger sees. If a v1 trigger's condition references a field that
+  exists in the raised payload, it matches; if it references a renamed/removed field, the
+  condition silently fails (run history will surface this in the future).
+- **Latest defaults** — `fire(type, payload)` uses the event's `latest` when no version is given.
+  The editor uses each schema's `latest` when authoring a new trigger; existing triggers keep their
+  pinned versions until upgraded.
+
+**Startup validation** — `createTriggerFramework` throws on any of:
+
+- A schema's `latest` doesn't appear in its `versions` map.
+- An action schema declares a version that has no corresponding registered handler version.
+- A `ref.source` is referenced by a schema (any version) but isn't on the `RefRegistry`.
+- An event type lacks a `ContextBuilder`.
+
+**You carry old handler versions forever** (or until you migrate every trigger pinned to them).
+That's the real cost of versioning; the framework's plumbing is just the mechanism. Set a sunset
+policy for old versions early — without one, the codebase accumulates a handler graveyard.
+
 ## Ref data sources
 
 An action input can be **a reference to something stored elsewhere** — a user, a Slack channel, a
@@ -113,22 +174,27 @@ registered triggers. That's a legitimate empty result — `fire()` returns `{ ev
 ## Raising an event
 
 Events are raised **in-process** — there is no HTTP endpoint. Wherever the app detects something
-worth reacting to, call `fire(type, payload)`. It validates the payload against the event type's
-schema, builds the event (generates `id` + `ts`), runs it through the engine, and returns
-`{ eventId, matched }`. It throws on a bad payload, an unknown event type, or any matched trigger
-whose action is misconfigured.
+worth reacting to, call `fire(type, payload, opts?)`. It validates the payload against the chosen
+event version's schema, builds the event (generates `id` + `ts`, stamps `version`), runs it through
+the engine, and returns `{ eventId, matched }`. It throws on a bad payload, an unknown event type,
+an unknown version, or any matched trigger whose action is misconfigured.
 
 ```ts
 try {
+  // Default: raise as the event's `latest` version.
   const { eventId, matched } = await fw.fire("job.changed", {
     previousJob: "J-100",
     currentJob: "J-200",
     station: "S-1",
   });
+
+  // Or pin the raise to a specific version (e.g. for backward-compat dual-raising during a migration).
+  await fw.fire("job.changed", payload, { version: "1" });
+
   // eventId → generated id (for tracing)
   // matched → ids of triggers whose conditions matched, e.g. ["trg_seed"]
 } catch (err) {
-  // bad payload, unknown event type, or misconfigured action (missing handler / missing input)
+  // bad payload, unknown event type/version, or misconfigured action (missing handler / missing input)
   log.warn(`fire failed: ${(err as Error).message}`);
 }
 ```
@@ -155,17 +221,18 @@ built per type (`engine.reload()`). So at runtime "find the triggers for this ev
 evaluation only decides which of that type's triggers *match*.
 
 ```
-(1) fire(type, payload)
-(2) validate payload vs the event type's schema ──✗──▶ throw Error            (validate.ts)
-(3) build the event { id, type, ts, payload }                                 (framework.ts)
-(4) look up the condition engine for this type ──none──▶ done (matched: [])   (engine.ts)
-(5) build facts from the event (event ─▶ flat fact map)            SEAM A     (context.ts)
-(6) evaluate conditions ─▶ the set of matched triggers                        (json-rules-engine)
-(7) for each matched trigger, for each action on the trigger (in order):       SEAM C
-       resolve handler, interpolate {{...}}, check required inputs, run it     (engine.ts /
-       any failure here throws and aborts the loop                              actions.ts /
-                                                                                interpolate.ts)
-(8) return { eventId, matched }
+(1) fire(type, payload, opts?)
+(2) resolve version = opts.version ?? eventSchema.latest
+(3) validate payload vs schema.versions[version] ──✗──▶ throw Error            (validate.ts)
+(4) build the event { id, type, version, ts, payload }                         (framework.ts)
+(5) look up the condition engine for this type ──none──▶ done (matched: [])   (engine.ts)
+(6) build facts from the event (event ─▶ flat fact map)             SEAM A     (context.ts)
+(7) evaluate conditions ─▶ the set of matched triggers                         (json-rules-engine)
+(8) for each matched trigger, for each action (in order):                       SEAM C
+       actions.get(action.type, action.version) ──✗──▶ throw Error              (engine.ts /
+       interpolate {{...}}, check required inputs, run it                        actions.ts /
+       any failure here throws and aborts the loop                               interpolate.ts)
+(9) return { eventId, matched }
 ```
 
 Validation runs on the **event entry** in `fire()` and (via `validateActionInputs`) on the

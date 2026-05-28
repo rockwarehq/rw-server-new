@@ -31,31 +31,52 @@ export interface TriggerFrameworkConfig {
   refs?: RefRegistry;
 }
 
+/** Options for `fire()` — version can be specified to raise as a non-latest schema. */
+export interface FireOptions {
+  /** Event schema version to raise as. Defaults to the event's `latest`. */
+  version?: string;
+}
+
 export interface TriggerFramework {
   store: TriggerStore;
   engine: TriggerEngine;
   ingest: IngestRuntime;
-  /** Editor catalog for a specific event/action type. Both args are required — the engine has no defaults. */
-  catalog(eventType: EventType, actionType: string): Catalog;
-  /** Validate action inputs against the configured action schemas. Throws on invalid; returns the normalized inputs on success. */
-  validateActionInputs(actionType: string, inputs: unknown): Record<string, unknown>;
+  /** The event schemas the framework was configured with (read-only — for RPC layers resolving `latest`). */
+  eventSchemas: Record<EventType, EventSchema>;
+  /** The action schemas the framework was configured with (read-only — for RPC layers resolving `latest`). */
+  actionSchemas: Record<string, ActionSchema>;
+  /**
+   * Editor catalog for a specific event/action type and (optionally) versions. If a version is
+   * omitted, each schema's `latest` is used. Throws on unknown type or version.
+   */
+  catalog(eventType: EventType, actionType: string, eventVersion?: string, actionVersion?: string): Catalog;
+  /** Validate action inputs against a specific schema version. Throws on invalid; returns the normalized inputs on success. */
+  validateActionInputs(actionType: string, version: string, inputs: unknown): Record<string, unknown>;
   /**
    * Picker-options endpoint for the editor UI. Resolves `source` against the configured
    * `RefRegistry` and calls its `list(ctx)`. Throws if `source` isn't registered.
    */
   listRefOptions(source: string, ctx?: RefContext): Promise<RefOption[]>;
   /**
-   * Validate a payload against its event type's schema, then build + submit the event. The
-   * in-process entry point for raising events. Throws on invalid payload, unknown event type, or
-   * any misconfigured action in the matched set (missing handler, missing required input). See the
+   * Validate a payload against its event type's schema (at `opts.version` or `latest`), then build
+   * + submit the event. The in-process entry point for raising events. Throws on invalid payload,
+   * unknown event type, unknown version, or any misconfigured action in the matched set. See the
    * README's "Error model" for the convention.
    */
-  fire(type: EventType, payload: Record<string, unknown>): Promise<{ eventId: string; matched: string[] }>;
+  fire(
+    type: EventType,
+    payload: Record<string, unknown>,
+    opts?: FireOptions,
+  ): Promise<{ eventId: string; matched: string[] }>;
 }
 
 /**
  * Assemble the framework from an app's domain config. Wires the engine, ingestion, validators, and
  * `fire()` together and indexes the current triggers (`engine.reload()`).
+ *
+ * Startup validation throws if any declared schema is inconsistent: missing context builder, missing
+ * ref source, `latest` pointing at an absent version, or an action version declared in the schema
+ * with no registered handler.
  */
 export function createTriggerFramework(config: TriggerFrameworkConfig): TriggerFramework {
   const { store, eventSchemas, actionSchemas, contextBuilders } = config;
@@ -70,12 +91,36 @@ export function createTriggerFramework(config: TriggerFrameworkConfig): TriggerF
     }
   }
 
-  // every `ref.source` declared in any action input schema must be registered. Catches
-  // a missing RefSource at boot instead of when an editor opens a picker.
+  // Fail fast: every event schema's `latest` must point at an existing version.
+  for (const [type, schema] of Object.entries(eventSchemas)) {
+    if (!schema.versions[schema.latest]) {
+      throw new Error(`event "${type}" latest="${schema.latest}" is not a key in versions`);
+    }
+  }
+
+  // Fail fast: every action schema's `latest` must point at an existing version, and every
+  // (type, version) declared in the schema must have a corresponding registered handler version.
+  for (const [type, schema] of Object.entries(actionSchemas)) {
+    if (!schema.versions[schema.latest]) {
+      throw new Error(`action "${type}" latest="${schema.latest}" is not a key in versions`);
+    }
+    for (const v of Object.keys(schema.versions)) {
+      if (!config.actions.get(type, v)) {
+        throw new Error(`action "${type}@${v}" declared in schema has no registered handler version`);
+      }
+    }
+  }
+
+  // Fail fast: every `ref.source` declared in any action input schema (across all versions) must
+  // be registered. Catches a missing RefSource at boot instead of when an editor opens a picker.
   for (const action of Object.values(actionSchemas)) {
-    for (const [key, prop] of Object.entries(action.inputSchema.properties)) {
-      if (prop.ref && !refs.get(prop.ref.source)) {
-        throw new Error(`action "${action.type}" input "${key}" references unknown ref source "${prop.ref.source}"`);
+    for (const [version, v] of Object.entries(action.versions)) {
+      for (const [key, prop] of Object.entries(v.inputSchema.properties)) {
+        if (prop.ref && !refs.get(prop.ref.source)) {
+          throw new Error(
+            `action "${action.type}@${version}" input "${key}" references unknown ref source "${prop.ref.source}"`,
+          );
+        }
       }
     }
   }
@@ -88,16 +133,28 @@ export function createTriggerFramework(config: TriggerFrameworkConfig): TriggerF
     store,
     engine,
     ingest,
-    catalog: (eventType, actionType) => buildCatalog(eventSchemas, actionSchemas, eventType, actionType),
+    eventSchemas,
+    actionSchemas,
+    catalog: (eventType, actionType, eventVersion, actionVersion) =>
+      buildCatalog(eventSchemas, actionSchemas, eventType, actionType, eventVersion, actionVersion),
     validateActionInputs: validators.validateActionInputs,
     async listRefOptions(source, ctx = {}) {
       const ref = refs.get(source);
       if (!ref) throw new Error(`unknown ref source: ${source}`);
       return ref.list(ctx);
     },
-    async fire(type, payload) {
-      const normalized = validators.validateEventPayload(type, payload);
-      const event: AppEvent = { id: nanoid(8), type, ts: new Date().toISOString(), payload: normalized };
+    async fire(type, payload, opts) {
+      const eventSchema = eventSchemas[type];
+      if (!eventSchema) throw new Error(`unknown event type: ${type}`);
+      const version = opts?.version ?? eventSchema.latest;
+      const normalized = validators.validateEventPayload(type, version, payload);
+      const event: AppEvent = {
+        id: nanoid(8),
+        type,
+        version,
+        ts: new Date().toISOString(),
+        payload: normalized,
+      };
       const matched = await ingest.submit(event);
       return { eventId: event.id, matched };
     },

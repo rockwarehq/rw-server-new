@@ -31,10 +31,10 @@ imports app code. That boundary is what keeps the engine reusable.
 
 | File / folder | What it does |
 | --- | --- |
-| `events/<type>.ts` | One file per event type. Exports `schema: EventSchema` + `contextBuilder: ContextBuilder` — colocated so they can't drift. (e.g. `events/job-changed.ts`.) |
+| `events/<type>.ts` | One file per event type. Exports `schema: EventSchema` (versioned — `latest` + `versions` map) + `contextBuilder: ContextBuilder`. (e.g. `events/job-changed.ts`.) |
 | `events/index.ts` | Aggregator. Collects every event module into `EVENT_SCHEMAS` + `buildContextBuilders()`. Add a new event = drop a file in `events/`, add one import line here. |
-| `actions/<type>.ts` | One file per action type. Exports `schema: ActionSchema` + `handler: ActionHandler` — colocated, handler reuses `schema.type` and `schema.inputSchema` directly. (e.g. `actions/send-alert.ts`.) |
-| `actions/index.ts` | Aggregator. Collects every action module into `ACTION_SCHEMAS` + `buildActionRegistry()`. Add a new action = drop a file in `actions/`, add one import line here. |
+| `actions/<type>.ts` | One file per action type. Exports `handler: ActionHandler` with all versions inside (`latest` + `versions: { "1": { inputSchema, run }, ... }`) — schema and behavior per version live in the same object. (e.g. `actions/send-alert.ts`.) |
+| `actions/index.ts` | Aggregator. Derives `ACTION_SCHEMAS` (catalog view, no `run`) from each handler and builds the versioned `ActionRegistry`. Add a new action = drop a file in `actions/`, add one import line here. |
 | `refs.ts` | `RefSource` implementations + `getXById` helpers. Today: in-memory users fixture (mock for a future `@rw/db` users table). One file per source as this grows. |
 | `store.ts` | A MOCK file-backed `TriggerStore` (persists triggers to JSON for dev) + the seed trigger. Swap for a `@rw/db`-backed store later; nothing else changes. |
 | `index.ts` | Composition root — `createAppTriggerFramework()` feeds the aggregators into `@rw/triggers`' `createTriggerFramework()`, and `getTriggerFramework()` is the shared singleton the oRPC layer uses. |
@@ -66,12 +66,19 @@ error model and the `ingest.submit` escape hatch.
 
 ## Adding things
 
-- **New action** → create `actions/<type>.ts` exporting `schema` + `handler`, then add one import
-  line to `actions/index.ts`. Schema and handler live in the same module so they can't disagree.
-  Validation and the editor form derive automatically.
-- **New event type** → create `events/<type>.ts` exporting `schema` + `contextBuilder`, then add
-  one import line to `events/index.ts`. Use `statelessContextBuilder` from `@rw/triggers` unless
-  the event needs joined data.
+- **New action** → create `actions/<type>.ts` exporting one `handler: ActionHandler` with `latest`
+  + `versions` inside, then add one import line to `actions/index.ts`. Each version pairs
+  `inputSchema` + `run` in the same object — they can't drift. The catalog view (no `run`) is
+  derived automatically.
+- **New version of an existing action** → add a `"2"` entry to that action's `versions` map (with
+  its own `inputSchema` + `run`); keep `"1"` in place as long as any trigger pins it. Bump `latest`
+  when the editor should default to `"2"` for new triggers.
+- **New event type** → create `events/<type>.ts` exporting `schema` (versioned) + `contextBuilder`,
+  then add one import line to `events/index.ts`. Use `statelessContextBuilder` from `@rw/triggers`
+  unless the event needs joined data.
+- **New version of an event** → add a `"2"` entry to the event's `versions` map. Existing triggers
+  keep their `eventVersion` pin; `fire(type, payload)` defaults to the new `latest` (use
+  `{ version: "1" }` to raise as the old shape during transitions).
 - **New ref data source** (picker for an action input) → add a `RefSource` to `refs.ts` and chain
   `.register(...)` in `index.ts`. Annotate the relevant action input's `SchemaProperty` with
   `ref: { source: "<key>" }`.

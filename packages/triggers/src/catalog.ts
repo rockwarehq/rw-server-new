@@ -1,17 +1,29 @@
 import { QB_OPERATORS } from "./qb-to-engine.js";
-import type { ActionSchema, Catalog, EventSchema, EventType, FactDef, TemplateVariable } from "./types.js";
+import type {
+  ActionSchema,
+  Catalog,
+  EventSchema,
+  EventSchemaVersion,
+  EventType,
+  FactDef,
+  TemplateVariable,
+} from "./types.js";
 
 /**
  * Builds the editor catalog (fields, template variables, operators) that a UI renders from. Pure
  * function over the schemas it's handed — the consuming app owns the concrete `EVENT_SCHEMAS` /
  * `ACTION_SCHEMAS` and their defaults.
+ *
+ * Version-aware: both the event and the action are looked up by `(type, version)`. Caller may pass
+ * `undefined` for either version to mean "use the schema's `latest`" — useful for authoring new
+ * triggers, where the editor doesn't know which version to pick yet.
  */
 
-/** Condition-builder fields for one event type: event.type + each payload field. */
-function factsFor(schema: EventSchema): FactDef[] {
+/** Condition-builder fields for one event payload shape: event.type + each payload field. */
+function factsFor(payload: EventSchemaVersion["payload"]): FactDef[] {
   return [
     { id: "event.type", label: "Event Type", type: "string" },
-    ...Object.entries(schema.payload).map(
+    ...Object.entries(payload).map(
       ([key, prop]): FactDef => ({
         id: `event.payload.${key}`,
         label: prop.title,
@@ -21,10 +33,10 @@ function factsFor(schema: EventSchema): FactDef[] {
   ];
 }
 
-/** Template variables insertable into action inputs: payload fields + event/system tokens. */
-function variablesFor(schema: EventSchema): TemplateVariable[] {
+/** Template variables insertable into action inputs: payload fields (for the selected version) + event/system tokens. */
+function variablesFor(schema: EventSchema, payload: EventSchemaVersion["payload"]): TemplateVariable[] {
   return [
-    ...Object.entries(schema.payload).map(
+    ...Object.entries(payload).map(
       ([key, prop]): TemplateVariable => ({
         key: `event.payload.${key}`,
         label: prop.title,
@@ -38,23 +50,45 @@ function variablesFor(schema: EventSchema): TemplateVariable[] {
   ];
 }
 
-/** Build the editor catalog for one event type + one action, from the given schema sets. */
+/**
+ * Build the editor catalog for one (event type, event version) + (action type, action version),
+ * from the given schema sets. `eventVersion` / `actionVersion` may be omitted to use each schema's
+ * `latest`.
+ */
 export function buildCatalog(
   eventSchemas: Record<EventType, EventSchema>,
   actionSchemas: Record<string, ActionSchema>,
   eventType: EventType,
   actionType: string,
+  eventVersion?: string,
+  actionVersion?: string,
 ): Catalog {
   const event = eventSchemas[eventType];
   const action = actionSchemas[actionType];
   if (!event) throw new Error(`unknown event type: ${eventType}`);
   if (!action) throw new Error(`unknown action type: ${actionType}`);
+
+  const evVersion = eventVersion ?? event.latest;
+  const acVersion = actionVersion ?? action.latest;
+
+  const evPayload = event.versions[evVersion];
+  if (!evPayload) {
+    const known = Object.keys(event.versions).join(", ");
+    throw new Error(`unknown event version: ${eventType}@${evVersion} (known: ${known})`);
+  }
+  if (!action.versions[acVersion]) {
+    const known = Object.keys(action.versions).join(", ");
+    throw new Error(`unknown action version: ${actionType}@${acVersion} (known: ${known})`);
+  }
+
   return {
     event,
+    eventVersion: evVersion,
     action,
+    actionVersion: acVersion,
     actions: Object.values(actionSchemas),
-    facts: factsFor(event),
-    variables: variablesFor(event),
+    facts: factsFor(evPayload.payload),
+    variables: variablesFor(event, evPayload.payload),
     operators: QB_OPERATORS,
   };
 }

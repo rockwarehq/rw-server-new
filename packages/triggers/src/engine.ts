@@ -33,28 +33,35 @@ export function createTriggerEngine(deps: EngineDeps): TriggerEngine {
   let engines = new Map<EventType, Engine>();
 
   /**
-   * Run every action on the trigger, in order. Throws on a missing handler or missing required
-   * input — these are misconfigurations and abort the dispatch loop loudly. Actions that ran
-   * before a throw have already produced their side effects; subsequent actions don't run.
+   * Run every action on the trigger, in order. Throws on a missing handler version or missing
+   * required input — these are misconfigurations and abort the dispatch loop loudly. Actions that
+   * ran before a throw have already produced their side effects; subsequent actions don't run.
+   *
+   * Handler resolution is STRICT on `(type, version)`. Event-version dispatch is lenient: the
+   * trigger fires against whatever payload arrived (caller decided the event version at fire-time
+   * via FireOptions.version or it defaulted to latest).
    */
   async function runActions(trigger: Trigger, event: AppEvent): Promise<void> {
     for (const [idx, action] of trigger.actions.entries()) {
-      const handler = deps.actions.get(action.type);
-      if (!handler) {
+      const versioned = deps.actions.get(action.type, action.version);
+      if (!versioned) {
+        const knownVersions = deps.actions.latest(action.type)
+          ? ` (registered versions of "${action.type}" don't include "${action.version}")`
+          : "";
         throw new Error(
-          `trigger "${trigger.label}" (${trigger.id}) action #${idx} ("${action.type}"): no handler registered`,
+          `trigger "${trigger.label}" (${trigger.id}) action #${idx} ("${action.type}@${action.version}"): no handler registered${knownVersions}`,
         );
       }
 
       const inputs = interpolateInputs(action.inputs as Record<string, unknown>, { event });
-      const missing = missingRequired(inputs, handler.inputSchema);
+      const missing = missingRequired(inputs, versioned.inputSchema);
       if (missing) {
         throw new Error(
-          `trigger "${trigger.label}" (${trigger.id}) action #${idx} ("${action.type}"): missing required input "${missing}"`,
+          `trigger "${trigger.label}" (${trigger.id}) action #${idx} ("${action.type}@${action.version}"): missing required input "${missing}"`,
         );
       }
 
-      await handler.run(inputs, { trigger, eventId: event.id });
+      await versioned.run(inputs, { trigger, eventId: event.id });
     }
   }
 

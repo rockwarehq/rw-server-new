@@ -8,16 +8,19 @@ const seedTrigger: Trigger = {
   label: "Alert on job change at S-1",
   enabled: true,
   event: "job.changed",
+  eventVersion: "1",
   conditions: {
     combinator: "and",
     rules: [{ field: "event.payload.station", operator: "=", value: "S-1" }],
   },
   // Two actions; both fire (in order) whenever the conditions match. Recipients are stored as
   // user ids — the editor picker resolves them to names + emails via `RefRegistry.list("users")`,
-  // and the handler resolves them back to emails at run time (see actions.ts / refs.ts).
+  // and the handler resolves them back to emails at run time (see actions/send-alert.ts / refs.ts).
+  // Each action pins to a specific version of its handler; dispatch is strict on (type, version).
   actions: [
     {
       type: "sendAlert",
+      version: "1",
       inputs: {
         text: "Job changed from {{event.payload.previousJob}} to {{event.payload.currentJob}} at {{event.payload.station}}",
         recipientUserIds: ["u_supervisor"],
@@ -25,6 +28,7 @@ const seedTrigger: Trigger = {
     },
     {
       type: "sendAlert",
+      version: "1",
       inputs: {
         text: "FYI: shift lead notified of change at {{event.payload.station}}",
         recipientUserIds: ["u_shift_lead"],
@@ -33,14 +37,29 @@ const seedTrigger: Trigger = {
   ],
 };
 
-/** Pre-multi-action triggers stored `action: TriggerAction`; promote to `actions: TriggerAction[]`. */
+/**
+ * Backfill missing fields when loading older mock files.
+ *   - Pre-multi-action: `action: TriggerAction` → `actions: TriggerAction[]`
+ *   - Pre-versioning: missing `eventVersion` defaults to "1"; each action missing `version`
+ *     defaults to "1". (Safe baseline — every existing schema launched at v1.)
+ */
 function migrateLegacy(raw: Record<string, unknown>): Trigger {
-  if (Array.isArray(raw.actions)) return raw as unknown as Trigger;
-  if (raw.action) {
-    const { action, ...rest } = raw;
-    return { ...rest, actions: [action] } as unknown as Trigger;
-  }
-  return { ...raw, actions: [] } as unknown as Trigger;
+  const stage1 = Array.isArray(raw.actions)
+    ? raw
+    : raw.action
+      ? { ...raw, actions: [raw.action] }
+      : { ...raw, actions: [] };
+
+  const actions = (stage1.actions as Array<Record<string, unknown>>).map((a) => ({
+    ...a,
+    version: typeof a.version === "string" ? a.version : "1",
+  }));
+
+  return {
+    ...stage1,
+    eventVersion: typeof stage1.eventVersion === "string" ? stage1.eventVersion : "1",
+    actions,
+  } as unknown as Trigger;
 }
 
 /**
