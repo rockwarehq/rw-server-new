@@ -13,7 +13,7 @@
     "db:generate": "pnpm --filter @rw/db prisma:generate",
     "db:migrate": "pnpm --filter @rw/db prisma:migrate",
     "db:migrate:dev": "pnpm --filter @rw/db prisma:migrate:dev",
-    "db:seed": "pnpm --filter @rw/db seed",
+    "db:seed": "pnpm --filter @rw/api db:seed",
     "openapi:generate": "tsx apps/api/scripts/generate-openapi.ts",
     "openapi:client": "pnpm --filter @rockwarehq/api-client generate && pnpm --filter @rockwarehq/api-client build",
     "openapi:all": "pnpm openapi:generate && pnpm openapi:client",

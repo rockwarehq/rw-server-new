@@ -13,8 +13,7 @@
     "build": "tsc -b",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:migrate:dev": "prisma migrate dev",
-    "seed": "tsx seed.ts"
+    "prisma:migrate:dev": "prisma migrate dev"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",

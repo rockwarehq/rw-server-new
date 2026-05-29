@@ -1,0 +1,128 @@
+{
+  "name": "modbus-tcp",
+  "displayName": "Modbus TCP/IP",
+  "description": "Connect to devices using Modbus TCP protocol",
+  "version": "1.0.0",
+  "vendor": "Rockware",
+  "category": "device",
+  "status": "active",
+  "connectionSchema": {
+    "type": "object",
+    "properties": {
+      "host": {
+        "type": "string",
+        "title": "IP Address",
+        "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$",
+        "examples": ["192.168.1.100"]
+      },
+      "port": {
+        "type": "integer",
+        "title": "Port",
+        "default": 502,
+        "minimum": 1,
+        "maximum": 65535
+      },
+      "unitId": {
+        "type": "integer",
+        "title": "Unit ID",
+        "default": 1,
+        "minimum": 0,
+        "maximum": 247
+      },
+      "timeout": {
+        "type": "integer",
+        "title": "Timeout (ms)",
+        "default": 5000,
+        "minimum": 100
+      }
+    },
+    "required": ["host", "port", "unitId"]
+  },
+  "pointGroupSchema": {
+    "type": "object",
+    "properties": {
+      "functionCode": {
+        "type": "integer",
+        "title": "Function Code",
+        "description": "Modbus function code for bulk reads",
+        "enum": [1, 2, 3, 4],
+        "enumNames": [
+          "Read Coils (1)",
+          "Read Discrete Inputs (2)",
+          "Read Holding Registers (3)",
+          "Read Input Registers (4)"
+        ],
+        "default": 3
+      },
+      "startAddress": {
+        "type": "integer",
+        "title": "Start Address",
+        "description": "000001 - 065536 for Coils. 100001 - 165536 for Discrete Inputs. 300001 - 365536 for Input Registers. 400001 - 465536 for Holding Registers.",
+        "minimum": 1,
+        "maximum": 465536,
+        "default": 0
+      },
+      "optimizeBulkReads": {
+        "type": "boolean",
+        "title": "Optimize Bulk Reads",
+        "description": "Read contiguous addresses in single request",
+        "default": true
+      }
+    },
+    "required": ["functionCode"]
+  },
+  "pointSchema": {
+    "type": "object",
+    "properties": {
+      "address": {
+        "type": "integer",
+        "title": "Register Address",
+        "description": "000001 - 065536 for Coils. 100001 - 165536 for Discrete Inputs. 300001 - 365536 for Input Registers. 400001 - 465536 for Holding Registers.",
+        "minimum": 1,
+        "maximum": 465536
+      },
+      "dataType": {
+        "type": "string",
+        "title": "Data Type",
+        "enum": ["int16", "uint16", "int32", "uint32", "float", "bool"],
+        "default": "int16"
+      },
+      "byteOrder": {
+        "type": "string",
+        "title": "Byte Order",
+        "enum": ["big", "little"],
+        "default": "big"
+      },
+      "wordOrder": {
+        "type": "string",
+        "title": "Word Order",
+        "description": "For 32-bit values",
+        "enum": ["highLow", "lowHigh"],
+        "default": "highLow"
+      }
+    },
+    "required": ["address", "dataType"]
+  },
+  "capabilities": {
+    "read": true,
+    "write": true,
+    "subscribe": false,
+    "browse": false
+  },
+  "ui": {
+    "connectionForm": {
+      "layout": "grid",
+      "fieldOrder": ["ip", "port", "unitId", "timeout"],
+      "fieldGroups": {
+        "Connection": ["ip", "port"],
+        "Device Settings": ["unitId", "timeout"]
+      }
+    },
+    "pointGroupForm": {
+      "layout": "stack",
+      "fieldOrder": ["functionCode", "startAddress", "optimizeBulkReads"]
+    },
+    "icon": "🔌",
+    "color": "#3B82F6"
+  }
+}

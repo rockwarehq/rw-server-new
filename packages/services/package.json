@@ -6,6 +6,7 @@
   "exports": {
     "./audit/*": "./dist/audit/*.js",
     "./auth/*": "./dist/auth/*.js",
+    "./automation/*": "./dist/automation/*.js",
     "./config": "./dist/config.js",
     "./cycle/*": "./dist/cycle/*.js",
     "./dashboard/*": "./dist/dashboard/*.js",
@@ -24,13 +25,15 @@
     "./processor/*": "./dist/processor/*.js",
     "./queues/*": "./dist/queues/*.js",
     "./rpc/*": "./dist/rpc/*.js",
-    "./types/*": "./dist/types/*.js"
+    "./types/*": "./dist/types/*.js",
+    "./user/*": "./dist/user/*.js"
   },
   "scripts": {
     "build": "tsc -b"
   },
   "dependencies": {
     "@orpc/server": "^1.14.0",
+    "@rw/automations": "workspace:*",
     "@rw/db": "workspace:*",
     "@rw/runtime": "workspace:*",
     "bullmq": "^5.66.5",

@@ -1,0 +1,24 @@
+{
+  "name": "simulation",
+  "displayName": "Simulation",
+  "description": "Generates simulated data for testing and development",
+  "version": "1.0.0",
+  "vendor": "Rockware",
+  "category": "virtual",
+  "status": "active",
+  "connectionSchema": {
+    "type": "object",
+    "properties": {
+      "mode": {
+        "type": "string",
+        "title": "Mode",
+        "default": "simulation"
+      }
+    }
+  },
+  "capabilities": {
+    "read": true,
+    "write": false,
+    "subscribe": false
+  }
+}

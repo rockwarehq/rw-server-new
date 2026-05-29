@@ -15,7 +15,10 @@
   "scripts": {
     "build": "tsc -b",
     "start": "node dist/main.js",
-    "dev": "tsx watch src/main.ts"
+    "dev": "tsx watch src/main.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:import": "tsx scripts/seed-import/index.ts",
+    "db:importdev": "tsx scripts/seed-import/importdev.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.999.0",
@@ -28,8 +31,9 @@
     "@fastify/type-provider-json-schema-to-ts": "^5.0.0",
     "@orpc/server": "^1.14.0",
     "@rw/db": "workspace:*",
-    "@rw/services": "workspace:*",
     "@rw/runtime": "workspace:*",
+    "@rw/services": "workspace:*",
+    "@rw/automations": "workspace:*",
     "ajv": "^8.17.1",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.66.5",
@@ -41,6 +45,7 @@
     "fastify-plugin": "^5.1.0",
     "http-errors": "^2.0.1",
     "ioredis": "^5.10.1",
+    "json-rules-engine": "^7.3.1",
     "json-schema-to-ts": "^3.1.1",
     "mqtt": "^5.14.1",
     "nanoid": "^5.1.6",

@@ -1,2 +1,2 @@
 export { getEmailClient, isEmailEnabled } from "@rw/runtime/email";
-export { sendInviteEmail, sendPasswordResetEmail } from "./send.js";
+export { sendAlertEmail, sendInviteEmail, sendPasswordResetEmail } from "./send.js";

@@ -12,6 +12,16 @@ interface ResetEmailParams {
   resetToken: string;
 }
 
+interface AlertEmailParams {
+  subject: string;
+  message: string;
+}
+
+/** Escape HTML-significant characters so an interpolated automation message renders as plain text. */
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function baseTemplate(content: string): string {
   return `
 <!DOCTYPE html>
@@ -102,6 +112,20 @@ export function createResetEmailHtml(params: ResetEmailParams): string {
       This link will expire in 1 hour. If you did not request a password reset, you can safely ignore this email.
     </p>
   `);
+}
+
+export function createAlertEmailHtml(params: AlertEmailParams): string {
+  const { subject, message } = params;
+  const body = escapeHtml(message).replace(/\n/g, "<br>");
+
+  return baseTemplate(`
+    <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 20px;">${escapeHtml(subject)}</h1>
+    <p>${body}</p>
+  `);
+}
+
+export function createAlertEmailText(params: AlertEmailParams): string {
+  return params.message;
 }
 
 export function createResetEmailText(params: ResetEmailParams): string {

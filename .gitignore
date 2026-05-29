@@ -20,3 +20,35 @@ coverage/
 # Fly generated configs
 fly.generated.toml
 apps/*/fly.generated.toml
+
+# Trigger framework mock store (file-backed dev store)
+.triggers-mock.json
+apps/*/.triggers-mock.json
+
+# Legacy SQL import data (may contain sensitive data) — keep the dir, ignore its contents
+apps/api/scripts/seed-import/data/*
+!apps/api/scripts/seed-import/data/.gitkeep
+
+# Claude Code local config
+.claude
+.claude/
+
+# Editors / IDEs
+.idea
+.vscode
+*code-workspace
+*.swp
+
+# Runtime / process data
+pids
+*.pid
+*.seed
+.npm
+.node_repl_history
+
+# Coverage / profiling
+.nyc_output
+lib-cov
+profile-*
+*clinic*
+*flamegraph*

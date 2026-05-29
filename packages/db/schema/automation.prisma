@@ -1,0 +1,122 @@
+// Three models:
+//   - Automation         — the user-authored row (event + conditions + ordered actions)
+//   - AutomationRun       — one row per fw.fire() call (audit + run history)
+//   - AutomationActionRun — one row per action attempt within a run
+/*
+  All valid fires        ──► AutomationRun       ("event was raised")
+    │
+    └─ filtered to: same event type + enabled + conditions truthy
+       │
+       └────────────────► AutomationRunMatch     ("automation said yes")
+          │
+          └─ filtered to: each action in that automation's actions[]
+             │
+             └─────────► AutomationActionRun    ("an action was attempted")
+*/
+
+model Automation {
+  id      String  @id @default(uuid()) @db.Uuid
+  label   String  @unique
+  enabled Boolean @default(true)
+
+  /// Event type this automation listens to (e.g. "job.changed"). Matches an `EventSchema.type`
+  /// declared in apps/api/src/automations/events/.
+  event String
+  eventVersion String
+
+  /// react-querybuilder condition tree (RuleGroupType from @rw/automations). Evaluated by
+  /// json-rules-engine after the ContextBuilder flattens the event into facts.
+  conditions Json
+
+  /// Each fires in sequence when conditions match.
+  actions Json
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Hot path on engine.reload(): "list enabled automations for this event type."
+  @@index([enabled, event])
+}
+
+/// One row per fw.fire() call
+model AutomationRun {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// AppEvent.type / .version / .id (UUID generated inside fire()).
+  eventType    String
+  eventVersion String
+  eventId      String @db.Uuid
+  /// AppEvent.payload as raised (post-zod validation, pre-dispatch).
+  payload      Json
+
+  /// Automations that matched conditions for this run, in dispatch order. Empty join when no
+  /// automations matched — still a valid run, not an error.
+  matches AutomationRunMatch[]
+
+  status AutomationRunStatus
+  /// Error message when status = FAILED (the throw that aborted dispatch).
+  error  String?
+
+  firedAt    DateTime  @default(now()) @db.Timestamptz(3)
+  /// When dispatch finished (success OR failure). Null only while in-flight.
+  finishedAt DateTime? @db.Timestamptz(3)
+
+  actionRuns AutomationActionRun[]
+
+  @@index([firedAt(sort: Desc)])
+  @@index([eventType])
+  @@index([status])
+}
+
+/// One row per action attempt within an AutomationRun.
+model AutomationActionRun {
+  id String @id @default(uuid()) @db.Uuid
+
+  runId String        @db.Uuid
+  run   AutomationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  automationId String @db.Uuid
+
+  /// Index within the automation's actions[] array at the time the run was attempted.
+  actionIdx     Int
+  actionType    String
+  actionVersion String
+
+  status AutomationActionRunStatus
+  /// Error message when status = FAILED.
+  error  String?
+
+  startedAt  DateTime  @default(now()) @db.Timestamptz(3)
+  finishedAt DateTime? @db.Timestamptz(3)
+
+  @@index([runId])
+  @@index([automationId])
+  // Useful for "how many sendAlert@1 actions ran / failed today" without scanning the whole table.
+  @@index([actionType])
+}
+
+/// Join: one row per (run, automation) where the automation's conditions matched. 
+model AutomationRunMatch {
+  id           String        @id @default(uuid()) @db.Uuid
+  runId        String        @db.Uuid
+  run          AutomationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  automationId String        @db.Uuid
+  /// Order this automation was reached in the dispatch loop (0-based).
+  matchIdx     Int
+
+  @@unique([runId, automationId])
+  @@index([automationId])
+}
+
+enum AutomationRunStatus {
+  SUCCESS
+  FAILED
+}
+
+enum AutomationActionRunStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
+  /// Deferred to the ActionScheduler; the real outcome is recorded later as its own run.
+  SCHEDULED
+}
