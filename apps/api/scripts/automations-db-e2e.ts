@@ -136,18 +136,27 @@ async function setup(): Promise<{ workspaceId: string }> {
   return { workspaceId };
 }
 
+/** eventIds fired during this test. Runs are global (no workspace FK), so teardown targets its own rows by these. */
+const firedEventIds = new Set<string>();
+
 /**
  * Delete this test's automations (global — no workspace FK) and its audit runs (cascade to their
- * matches + action runs). Shared by the pre-run clean and the full teardown.
+ * matches + action runs). Runs are global too, so target them by the automations they matched
+ * (covers success + failed runs) plus the eventIds we fired (covers no-match runs). Shared by the
+ * pre-run clean and the full teardown.
  */
-async function cleanupTestData(workspaceId: string): Promise<void> {
+async function cleanupTestData(): Promise<void> {
   await prisma.automation.deleteMany({ where: { id: { in: AUTOMATION_IDS } } });
-  await prisma.automationRun.deleteMany({ where: { workspaceId } });
+  await prisma.automationRun.deleteMany({
+    where: {
+      OR: [{ matches: { some: { automationId: { in: AUTOMATION_IDS } } } }, { eventId: { in: [...firedEventIds] } }],
+    },
+  });
 }
 
 /** Remove every row this test created so re-runs start clean (and CI leaves no residue). */
 async function teardown(workspaceId: string): Promise<void> {
-  await cleanupTestData(workspaceId);
+  await cleanupTestData();
   // Clear Job→currentBlob then drop the blob + job (Job→Site may restrict the workspace cascade).
   await prisma.job.updateMany({ where: { id: JOB_ID }, data: { currentBlobId: null } });
   await prisma.jobBlob.deleteMany({ where: { id: JOBBLOB_ID } });
@@ -163,15 +172,14 @@ async function main(): Promise<void> {
 
   // Pre-clean any residue from a prior crashed run BEFORE building the framework, so the store's
   // initial load doesn't pick up stale test automations.
-  await cleanupTestData(workspaceId);
+  await cleanupTestData();
 
-  const fw = await createAppAutomationFramework(workspaceId);
+  const fw = await createAppAutomationFramework();
 
   /** Upsert a `job.changed` automation matching `stationId == value`, with the given actions. */
   const seedAutomation = (spec: { id: string; label: string; value: string; actions: AutomationAction[] }) =>
     fw.store.upsert({
       id: spec.id,
-      workspaceId,
       label: spec.label,
       enabled: true,
       event: "job.changed",
@@ -208,6 +216,7 @@ async function main(): Promise<void> {
     const { result: r1, alerts } = await captureAlerts(() =>
       fw.fire("job.changed", { previousJobId: "j_100", currentJobId: "j_200", stationId: "s_1" }),
     );
+    firedEventIds.add(r1.eventId);
     const ourAlerts = alerts.filter((a) => a.includes(MAIN_LABEL));
     check("eventId generated", typeof r1.eventId === "string" && r1.eventId.length > 0, r1.eventId);
     check("our automation matched", r1.matched.includes(AUTO_MAIN_ID), r1.matched);
@@ -223,7 +232,7 @@ async function main(): Promise<void> {
     // -------------------------------------------------------------------------
     console.log("\n2. Audit — the happy-path fire persisted a run + action rows in Postgres");
     const run1 = await prisma.automationRun.findFirst({
-      where: { workspaceId, eventId: r1.eventId },
+      where: { eventId: r1.eventId },
       include: { matches: true, actionRuns: { orderBy: { actionIdx: "asc" } } },
     });
     check("AutomationRun row written for the fire", run1 !== null);
@@ -238,6 +247,7 @@ async function main(): Promise<void> {
     // -------------------------------------------------------------------------
     console.log("\n3. Condition mismatch — valid event, our automation doesn't match (stationId s_2)");
     const r2 = await fw.fire("job.changed", { previousJobId: "j_100", currentJobId: "j_200", stationId: "s_2" });
+    firedEventIds.add(r2.eventId);
     check("our automation NOT in matched", !r2.matched.includes(AUTO_MAIN_ID), r2.matched);
 
     // -------------------------------------------------------------------------
@@ -262,9 +272,11 @@ async function main(): Promise<void> {
     });
     check("upsert returned the automation", created.label === AUTHOR_LABEL);
     const beforeReload = await fw.fire("job.changed", { stationId: "s_9" });
+    firedEventIds.add(beforeReload.eventId);
     check("does NOT fire before reload()", !beforeReload.matched.includes(AUTO_AUTHOR_ID), beforeReload.matched);
     fw.engine.reload();
     const afterReload = await fw.fire("job.changed", { stationId: "s_9" });
+    firedEventIds.add(afterReload.eventId);
     check("fires after reload()", afterReload.matched.includes(AUTO_AUTHOR_ID), afterReload.matched);
 
     // -------------------------------------------------------------------------
@@ -272,11 +284,12 @@ async function main(): Promise<void> {
     await fw.store.upsert({ ...created, enabled: false });
     fw.engine.reload();
     const afterDisable = await fw.fire("job.changed", { stationId: "s_9" });
+    firedEventIds.add(afterDisable.eventId);
     check("disabled automation no longer matches", !afterDisable.matched.includes(AUTO_AUTHOR_ID), afterDisable.matched);
 
     // -------------------------------------------------------------------------
     console.log("\n8. Persistence — a fresh DB store loads the automations from Postgres");
-    const reopened = await createDbAutomationStore(workspaceId);
+    const reopened = await createDbAutomationStore();
     check("happy-path automation persisted", reopened.get(AUTO_MAIN_ID) !== undefined);
     check("authored automation persisted", reopened.get(AUTO_AUTHOR_ID) !== undefined);
 
@@ -293,7 +306,7 @@ async function main(): Promise<void> {
     check("fire() threw", e9 !== null);
     check("error names the missing handler 'sendSms'", e9 !== null && /sendSms/.test(e9.message), e9?.message);
     const failedRun = await prisma.automationRun.findFirst({
-      where: { workspaceId, status: "FAILED" },
+      where: { status: "FAILED" },
       orderBy: { firedAt: "desc" },
       include: { actionRuns: true },
     });

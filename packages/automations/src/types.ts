@@ -144,13 +144,6 @@ export interface AutomationAction {
  */
 export interface Automation {
   id: string;
-  /**
-   * Workspace this automation runs under. Not stored on the DB row today — synthesized by the
-   * store at load time from its construction-time workspaceId, so handlers can read
-   * `ctx.automation.workspaceId` (e.g. to scope a user lookup). Will move back onto the DB row
-   * when multi-tenant scoping returns; the in-memory contract stays the same.
-   */
-  workspaceId: string;
   label: string;
   enabled: boolean;
   event: EventType;

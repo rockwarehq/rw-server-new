@@ -10,16 +10,12 @@ import prisma from "@rw/db";
  *     `matched` out into one `AutomationRunMatch` row per matched automation. Both writes happen
  *     in a single transaction so we don't end up with the run finalized but missing matches (or
  *     vice versa) on a partial failure.
- *
- * Workspace-scoped: each invocation pins to a workspaceId; the framework wires one recorder per
- * workspace alongside the store + ref source.
  */
-export function createDbRunRecorder(workspaceId: string): RunRecorder {
+export function createDbRunRecorder(): RunRecorder {
   return {
     async startRun({ event }) {
       const row = await prisma.automationRun.create({
         data: {
-          workspaceId,
           eventType: event.type,
           eventVersion: event.version,
           // AppEvent.id is a UUID v4 generated inside fire(); column is `@db.Uuid`.

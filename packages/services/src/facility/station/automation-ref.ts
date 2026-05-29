@@ -1,12 +1,12 @@
 import prisma from "@rw/db";
-import { createSiteScopedNameRef } from "../automation-ref-factory.js";
+import { createNameRef } from "../automation-ref-factory.js";
 
-/** `stations` picker source — every non-deleted station under any site in the workspace, name-ordered. */
-export const createStationsAutomationRef = createSiteScopedNameRef({
+/** `stations` picker source — every non-deleted station, name-ordered. */
+export const stationsAutomationRef = createNameRef({
   key: "stations",
-  findRows: (workspaceId) =>
+  findRows: () =>
     prisma.station.findMany({
-      where: { site: { workspaceId }, deletedAt: null },
+      where: { deletedAt: null },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

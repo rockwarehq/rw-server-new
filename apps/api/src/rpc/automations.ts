@@ -4,18 +4,8 @@ import * as z from "zod";
 import { getAutomationFramework } from "../automations/index.js";
 import { authRequired } from "./middleware.js";
 
-// Workspace-scoped: each handler resolves its framework via `context.iam.workspaceId`. The
-// framework is cached per workspace; first call per workspace pays the Prisma initial-load cost.
-
-/**
- * Pull the workspaceId off iam context. `authRequired` only checks user identity — workspace can
- * still be undefined when a user isn't acting under a specific workspace — so we guard here.
- */
-function requireWorkspaceId(context: { iam: { workspaceId?: string } }): string {
-  const id = context.iam.workspaceId;
-  if (!id) throw new ORPCError("UNAUTHORIZED", { message: "No workspace context" });
-  return id;
-}
+// Automations are global — handlers resolve the single shared framework (cached after first build;
+// the first call pays the Prisma initial-load cost). `authRequired` still gates on user identity.
 
 const conditionsSchema = z.object({
   combinator: z.string(),
@@ -72,8 +62,8 @@ export const getCatalog = authRequired
       actionVersion: z.string().min(1).optional(),
     }),
   )
-  .handler(async ({ input, context }) => {
-    const fw = await getAutomationFramework(requireWorkspaceId(context));
+  .handler(async ({ input }) => {
+    const fw = await getAutomationFramework();
     return fw.catalog(input.eventType, input.actionType, input.eventVersion, input.actionVersion);
   });
 
@@ -85,8 +75,8 @@ export const getCatalog = authRequired
  */
 export const listRefOptions = authRequired
   .input(z.object({ source: z.string().min(1) }))
-  .handler(async ({ input, context }) => {
-    const fw = await getAutomationFramework(requireWorkspaceId(context));
+  .handler(async ({ input }) => {
+    const fw = await getAutomationFramework();
     try {
       return await fw.listRefOptions(input.source);
     } catch (err) {
@@ -95,8 +85,8 @@ export const listRefOptions = authRequired
     }
   });
 
-export const listAutomations = authRequired.handler(async ({ context }) => {
-  const fw = await getAutomationFramework(requireWorkspaceId(context));
+export const listAutomations = authRequired.handler(async () => {
+  const fw = await getAutomationFramework();
   return fw.store.list();
 });
 
@@ -112,9 +102,8 @@ export const createAutomation = authRequired
       actions: actionsSchema,
     }),
   )
-  .handler(async ({ input, context }) => {
-    const workspaceId = requireWorkspaceId(context);
-    const fw = await getAutomationFramework(workspaceId);
+  .handler(async ({ input }) => {
+    const fw = await getAutomationFramework();
     const eventSchema = fw.eventSchemas[input.event];
     if (!eventSchema) throw new ORPCError("BAD_REQUEST", { message: `unknown event type: "${input.event}"` });
     const eventVersion = input.eventVersion ?? eventSchema.latest;
@@ -127,7 +116,6 @@ export const createAutomation = authRequired
 
     const automation = await fw.store.upsert({
       id: fw.store.newId(),
-      workspaceId,
       label: input.label,
       enabled: input.enabled ?? true,
       event: input.event,
@@ -150,8 +138,8 @@ export const updateAutomation = authRequired
       actions: actionsSchema.optional(),
     }),
   )
-  .handler(async ({ input, context }) => {
-    const fw = await getAutomationFramework(requireWorkspaceId(context));
+  .handler(async ({ input }) => {
+    const fw = await getAutomationFramework();
     const existing = fw.store.get(input.id);
     if (!existing) throw new ORPCError("NOT_FOUND", { message: "automation not found" });
 
@@ -180,8 +168,8 @@ export const updateAutomation = authRequired
     return updated;
   });
 
-export const deleteAutomation = authRequired.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
-  const fw = await getAutomationFramework(requireWorkspaceId(context));
+export const deleteAutomation = authRequired.input(z.object({ id: z.string() })).handler(async ({ input }) => {
+  const fw = await getAutomationFramework();
   if (!(await fw.store.remove(input.id))) throw new ORPCError("NOT_FOUND", { message: "automation not found" });
   fw.engine.reload();
   return { ok: true };

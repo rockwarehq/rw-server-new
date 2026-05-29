@@ -8,7 +8,7 @@ composition root that assembles them.
 ```
 events/<type>.ts    one event:  schema (versioned) + contextBuilder
 actions/<type>.ts   one action: handler with all versions inside
-index.ts            composition root — createAppAutomationFramework(workspaceId)
+index.ts            composition root — createAppAutomationFramework()
 ```
 
 The DB-backed seams (store, audit recorder, ref sources for the pickers) live in `@rw/services` and
@@ -16,12 +16,12 @@ are wired in by `index.ts`.
 
 ## How to use
 
-Get the per-workspace framework and `fire()` an event in-process:
+Get the shared framework and `fire()` an event in-process:
 
 ```ts
 import { getAutomationFramework } from "./automations/index.js";
 
-const fw = await getAutomationFramework(workspaceId);
+const fw = await getAutomationFramework();
 const { eventId, matched } = await fw.fire("job.changed", {
   previousJobId: "j_100",
   currentJobId: "j_200",

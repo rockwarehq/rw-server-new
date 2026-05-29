@@ -1,28 +1,27 @@
 import { type AutomationFramework, createAutomationFramework, createRefRegistry } from "@rw/automations";
 import { createDbRunRecorder } from "@rw/services/automation/recorder";
 import { createDbAutomationStore } from "@rw/services/automation/store";
-import { createEmployeesAutomationRef } from "@rw/services/employee/automation-ref";
-import { createStationsAutomationRef } from "@rw/services/facility/station/automation-ref";
-import { createWorkcentersAutomationRef } from "@rw/services/facility/workcenter/automation-ref";
-import { createJobsAutomationRef } from "@rw/services/job/automation-ref";
+import { employeesAutomationRef } from "@rw/services/employee/automation-ref";
+import { stationsAutomationRef } from "@rw/services/facility/station/automation-ref";
+import { workCentersAutomationRef } from "@rw/services/facility/workcenter/automation-ref";
+import { jobsAutomationRef } from "@rw/services/job/automation-ref";
 import { ACTION_SCHEMAS, buildActionRegistry } from "./actions/index.js";
 import { buildContextBuilders, EVENT_SCHEMAS } from "./events/index.js";
 
 /**
- * Build a DB-backed automation framework wired with this app's events + actions + refs for one
- * workspace. Wires:
+ * Build the DB-backed automation framework wired with this app's events + actions + refs.
+ * Automations are global — there's no workspace scoping. Wires:
  *   - `createDbAutomationStore` — automation definitions in Postgres.
  *   - the audit recorder — writes `AutomationRun` + `AutomationActionRun` rows on every fire.
- *   - the DB-backed ref sources — pickers list the workspace's employees / jobs / stations /
- *     work centers.
+ *   - the DB-backed ref sources — pickers list every employee / job / station / work center.
  */
-export async function createAppAutomationFramework(workspaceId: string): Promise<AutomationFramework> {
-  const store = await createDbAutomationStore(workspaceId);
+export async function createAppAutomationFramework(): Promise<AutomationFramework> {
+  const store = await createDbAutomationStore();
   const refs = createRefRegistry()
-    .register(createEmployeesAutomationRef(workspaceId))
-    .register(createWorkcentersAutomationRef(workspaceId))
-    .register(createStationsAutomationRef(workspaceId))
-    .register(createJobsAutomationRef(workspaceId));
+    .register(employeesAutomationRef)
+    .register(workCentersAutomationRef)
+    .register(stationsAutomationRef)
+    .register(jobsAutomationRef);
 
   return createAutomationFramework({
     eventSchemas: EVENT_SCHEMAS,
@@ -31,33 +30,30 @@ export async function createAppAutomationFramework(workspaceId: string): Promise
     contextBuilders: buildContextBuilders(),
     actions: buildActionRegistry(),
     refs,
-    recorder: createDbRunRecorder(workspaceId),
+    recorder: createDbRunRecorder(),
   });
 }
 
-// Per-workspace framework cache. Concurrent first calls share one creation promise so the initial
-// Prisma load runs at most once per workspace, even under burst traffic at boot.
-const cache = new Map<string, AutomationFramework>();
-const pending = new Map<string, Promise<AutomationFramework>>();
+// Single shared framework. Concurrent first calls share one creation promise so the initial Prisma
+// load runs at most once, even under burst traffic at boot.
+let cached: AutomationFramework | undefined;
+let pending: Promise<AutomationFramework> | undefined;
 
 /**
- * Resolve the shared `AutomationFramework` for a workspace. First call builds + caches; subsequent
- * calls return the same instance. The oRPC layer calls this with `context.iam.workspaceId`.
+ * Resolve the shared `AutomationFramework`. First call builds + caches; subsequent calls return the
+ * same instance.
  */
-export async function getAutomationFramework(workspaceId: string): Promise<AutomationFramework> {
-  const cached = cache.get(workspaceId);
+export async function getAutomationFramework(): Promise<AutomationFramework> {
   if (cached) return cached;
-  const inflight = pending.get(workspaceId);
-  if (inflight) return inflight;
+  if (pending) return pending;
 
-  const promise = (async () => {
-    const fw = await createAppAutomationFramework(workspaceId);
-    cache.set(workspaceId, fw);
-    pending.delete(workspaceId);
+  pending = (async () => {
+    const fw = await createAppAutomationFramework();
+    cached = fw;
+    pending = undefined;
     return fw;
   })();
-  pending.set(workspaceId, promise);
-  return promise;
+  return pending;
 }
 
 export type {

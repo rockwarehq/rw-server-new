@@ -75,6 +75,16 @@ enabled automations are grouped and one condition engine is built per type via `
 **Any `store.upsert`/`remove` must be followed by `engine.reload()`** or evaluation runs against
 stale rules.
 
+
+## Flow
+
+ fire(type, payload) → validate & normalize payload → build event envelope → open audit run → flatten event to a fact map → run pre-compiled conditions → for each match, interpolate inputs + execute actions in order
+ (auditing each) → finalize audit run (matches + status) → return.
+
+  Three things worth remembering: it's synchronous, in-process, no queue — fire() returns only after all matched actions finish; and the audit run brackets the whole thing (opened before, closed after) so even no-match and
+  failed fires are recorded. Currently not horizontally scaleable 
+
+
 ## Files
 
 | File | What it does |

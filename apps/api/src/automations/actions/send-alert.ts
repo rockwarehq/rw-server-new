@@ -49,7 +49,7 @@ export const handler: ActionHandler = {
 
         const recipients: string[] = [];
         for (const id of ids) {
-          const employee = await getEmployeeById(ctx.automation.workspaceId, id);
+          const employee = await getEmployeeById(id);
           if (employee) recipients.push(employee.name);
           else console.warn(`[automations] sendAlert: unknown employee id "${id}" — skipped`);
         }

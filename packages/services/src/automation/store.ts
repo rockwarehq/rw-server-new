@@ -8,17 +8,14 @@ import prisma from "@rw/db";
  * Initial load fills an in-memory `Map` so `list()` / `get()` stay synchronous (the engine's hot
  * path expects sync reads). Writes go to Postgres AND update the cache in lockstep.
  *
- * Workspace dimension: the DB row carries no workspaceId today — automations are global. The
- * factory still takes a workspaceId so the in-memory `Automation.workspaceId` field can be
- * synthesized for handlers that read `ctx.automation.workspaceId` (e.g. user lookups). When multi-
- * tenant scoping returns, this is where the WHERE clause gets added back.
+ * Automations are global — no workspace scoping. The DB row carries no workspaceId.
  *
  * MULTI-INSTANCE CAVEAT: another instance writing won't refresh THIS instance's cache. Plan
  * documented in @rw/automations' `store.ts` — Redis pub/sub broadcast. Single-instance for now.
  */
-export async function createDbAutomationStore(workspaceId: string): Promise<AutomationStore> {
+export async function createDbAutomationStore(): Promise<AutomationStore> {
   const rows = await prisma.automation.findMany();
-  const cache = new Map<string, Automation>(rows.map((r) => [r.id, rowToAutomation(r, workspaceId)]));
+  const cache = new Map<string, Automation>(rows.map((r) => [r.id, rowToAutomation(r)]));
 
   return {
     list: () => [...cache.values()],
@@ -50,7 +47,7 @@ export async function createDbAutomationStore(workspaceId: string): Promise<Auto
           actions: automation.actions as unknown as Parameters<typeof prisma.automation.upsert>[0]["update"]["actions"],
         },
       });
-      const out = rowToAutomation(row, workspaceId);
+      const out = rowToAutomation(row);
       cache.set(out.id, out);
       return out;
     },
@@ -74,25 +71,18 @@ export async function createDbAutomationStore(workspaceId: string): Promise<Auto
   };
 }
 
-/**
- * Turn a Prisma row into the in-memory `Automation` the engine expects. `workspaceId` is stamped
- * from the store factory's argument — it isn't a DB column today.
- */
-function rowToAutomation(
-  row: {
-    id: string;
-    label: string;
-    enabled: boolean;
-    event: string;
-    eventVersion: string;
-    conditions: unknown;
-    actions: unknown;
-  },
-  workspaceId: string,
-): Automation {
+/** Turn a Prisma row into the in-memory `Automation` the engine expects. */
+function rowToAutomation(row: {
+  id: string;
+  label: string;
+  enabled: boolean;
+  event: string;
+  eventVersion: string;
+  conditions: unknown;
+  actions: unknown;
+}): Automation {
   return {
     id: row.id,
-    workspaceId,
     label: row.label,
     enabled: row.enabled,
     event: row.event,

@@ -1,17 +1,6 @@
 import { type ActionHandler, type ActionRegistry, type ActionSchema, createActionRegistry } from "@rw/automations";
 import * as sendAlert from "./send-alert.js";
 
-/**
- * Action aggregator. Each action module exports one versioned `handler: ActionHandler`; this file
- * builds two views from it:
- *   - `ACTION_SCHEMAS`: catalog view (no `run`) — what the editor + RPC layer see.
- *   - `buildActionRegistry()`: full handlers (with `run`) — what dispatch uses, keyed by (type, version).
- *
- * Add a new action = drop a module in this folder, add one import + one entry below. Each
- * version's `inputSchema` is the single source of truth — the catalog view is derived from the
- * handler, so they can't disagree.
- */
-
 const modules: readonly { handler: ActionHandler }[] = [sendAlert] as const;
 
 /** Catalog view: strip `run` from each version so schemas are serializable + don't leak code. */
