@@ -57,6 +57,12 @@ export interface SchemaProperty {
    * `RefSource` in @rw/automations and the README's "Ref data sources" section.
    */
   ref?: RefAnnotation;
+  /**
+   * Display-only when `false`: the field stays a usable template variable (`{{event.payload.x}}`)
+   * and is still validated, but it is NOT offered as a condition-builder fact. Use for derived,
+   * mutable values like names — match on the stable id, show the name. Defaults to matchable.
+   */
+  matchable?: boolean;
 }
 
 /** Describes a picker-style reference field; sits on a SchemaProperty. */

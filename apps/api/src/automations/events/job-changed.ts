@@ -18,6 +18,12 @@ export const schema: EventSchema = {
         currentJobId: { type: "string", title: "Current Job", ref: { source: "jobs" } },
         stationId: { type: "string", title: "Station", ref: { source: "stations" } },
         workCenterId: { type: "string", title: "Work Center", ref: { source: "workCenters" } },
+        // Display-only names: insertable in action messages ({{event.payload.currentJobName}}) but
+        // not offered as condition facts — match on the id above; names are mutable.
+        previousJobName: { type: "string", title: "Previous Job Name", matchable: false },
+        currentJobName: { type: "string", title: "Current Job Name", matchable: false },
+        stationName: { type: "string", title: "Station Name", matchable: false },
+        workCenterName: { type: "string", title: "Work Center Name", matchable: false },
       },
     },
   },

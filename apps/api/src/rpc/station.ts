@@ -912,11 +912,16 @@ export const changeJob = userOrDisplayRequired.input(changeJobInputSchema).handl
     .then((fw) =>
       // Coerce nulls to undefined: payload fields are optional strings (a cleared job or a
       // station with no work center has no id), and the schema validator rejects explicit null.
+      // ids drive condition matching; the *Name fields are display-only template variables.
       fw.fire("job.changed", {
         previousJobId: result.data.previousJobId ?? undefined,
         currentJobId: result.data.newJobId ?? undefined,
         stationId: result.data.stationId,
         workCenterId: result.data.workCenterId ?? undefined,
+        previousJobName: result.data.previousJobName ?? undefined,
+        currentJobName: result.data.currentJobName ?? undefined,
+        stationName: result.data.stationName ?? undefined,
+        workCenterName: result.data.workCenterName ?? undefined,
       }),
     )
     .catch((err) => {

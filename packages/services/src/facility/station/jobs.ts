@@ -8,9 +8,13 @@ type ChangeJobResult =
   | {
       data: {
         stationId: string;
+        stationName: string;
         previousJobId: string | null;
+        previousJobName: string | null;
         newJobId: string | null;
+        currentJobName: string | null;
         workCenterId: string | null;
+        workCenterName: string | null;
       };
     }
   | { error: string; code: string };
@@ -63,9 +67,11 @@ export async function changeJob(stationId: string, newJobId: string | null): Pro
       where: { id: stationId },
       select: {
         id: true,
+        name: true,
         siteId: true,
         currentJobId: true,
         workcenterId: true,
+        workcenter: { select: { name: true } },
       },
     });
 
@@ -164,12 +170,22 @@ export async function changeJob(stationId: string, newJobId: string | null): Pro
     });
   }
 
+  // Resolve the previous job's display name (the new job's name is already loaded above). Used to
+  // populate the job.changed automation event payload so messages can show names, not uuids.
+  const previousJob = previousJobId
+    ? await prisma.job.findUnique({ where: { id: previousJobId }, select: { currentBlob: { select: { name: true } } } })
+    : null;
+
   return {
     data: {
       stationId,
+      stationName: station.name,
       previousJobId,
+      previousJobName: previousJob?.currentBlob?.name ?? null,
       newJobId,
+      currentJobName: job?.currentBlob?.name ?? null,
       workCenterId: station.workcenterId,
+      workCenterName: station.workcenter?.name ?? null,
     },
   };
 }

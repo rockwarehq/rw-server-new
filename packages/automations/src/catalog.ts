@@ -27,15 +27,19 @@ import type {
 function factsFor(payload: EventSchemaVersion["payload"]): FactDef[] {
   return [
     { id: "event.type", label: "Event Type", type: "string" },
-    ...Object.entries(payload).map(([key, prop]): FactDef => {
-      const fact: FactDef = {
-        id: `event.payload.${key}`,
-        label: prop.title,
-        type: "string",
-      };
-      if (prop.ref) fact.ref = prop.ref;
-      return fact;
-    }),
+    // Display-only fields (`matchable: false`, e.g. names) are usable as template variables but not
+    // offered for matching — match on the stable id, not a mutable name.
+    ...Object.entries(payload)
+      .filter(([, prop]) => prop.matchable !== false)
+      .map(([key, prop]): FactDef => {
+        const fact: FactDef = {
+          id: `event.payload.${key}`,
+          label: prop.title,
+          type: "string",
+        };
+        if (prop.ref) fact.ref = prop.ref;
+        return fact;
+      }),
   ];
 }
 
