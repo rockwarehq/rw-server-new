@@ -9,8 +9,9 @@ import { getUserById } from "@rw/services/user/automation-ref";
  * `@rw/services/user/automation-ref`). Per-version `inputSchema` + `run` live together so they
  * can't disagree. Stored input is user ids; the handler resolves them to emails at run time via
  * `@rw/services/user/automation-ref` (no framework hydration today, see @rw/automations README
- * "Ref data sources"). The message `text` arrives already interpolated by the engine
- * (`{{event.payload.*}}` resolved); the subject is the firing event's name.
+ * "Ref data sources"). The `text` and `subject` arrive already interpolated by the engine
+ * (`{{event.payload.*}}` resolved); `subject` is user-defined and falls back to the firing
+ * event's name when left blank.
  *
  * Add a new version (e.g. switch from a flat `recipientUserIds` to a structured
  * `{ to: [ids], cc: [ids] }`) by adding a `"2"` entry; v1 automations keep running against the v1
@@ -25,6 +26,11 @@ export const handler: ActionHandler = {
       inputSchema: {
         required: ["text", "recipientUserIds"],
         properties: {
+          subject: {
+            type: "string",
+            title: "Alert Subject",
+            description: "Email subject. Supports {{event.payload.*}} variables. Defaults to the event name if blank.",
+          },
           text: {
             type: "string",
             title: "Alert Text",
@@ -44,6 +50,7 @@ export const handler: ActionHandler = {
       },
       async run(inputs, ctx) {
         const text = String(inputs.text ?? "");
+        const subject = String(inputs.subject ?? "").trim() || ctx.automation.event;
         const ids = Array.isArray(inputs.recipientUserIds) ? inputs.recipientUserIds.map(String) : [];
 
         const recipients: string[] = [];
@@ -58,7 +65,7 @@ export const handler: ActionHandler = {
           return;
         }
 
-        const result = await sendAlertEmail({ to: recipients, subject: ctx.automation.event, message: text });
+        const result = await sendAlertEmail({ to: recipients, subject, message: text });
         if (!result.success) {
           throw new Error(`sendAlert email failed: ${result.error}`);
         }
